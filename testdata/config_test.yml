@@ -1,0 +1,5 @@
+rules:
+  - extensions: [txt]
+    command: "echo 'Text file: {{.File}}'"
+  - regex: ".*\.log$"
+    command: "echo 'Log file: {{.File}}'"
