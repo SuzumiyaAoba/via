@@ -18,13 +18,18 @@ type Config struct {
 	Rules []Rule `yaml:"rules"`
 }
 
-func LoadConfig() (*Config, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user home dir: %w", err)
+func LoadConfig(path string) (*Config, error) {
+	var configPath string
+	if path != "" {
+		configPath = path
+	} else {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user home dir: %w", err)
+		}
+		configPath = filepath.Join(home, ".config", "entry", "config.yml")
 	}
 
-	configPath := filepath.Join(home, ".config", "entry", "config.yml")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
