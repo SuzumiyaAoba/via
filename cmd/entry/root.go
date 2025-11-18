@@ -24,30 +24,40 @@ var rootCmd = &cobra.Command{
 	Use:   "entry <file>",
 	Short: "Entry is a CLI file association tool",
 	Long:  `Entry allows you to execute specific commands based on file extensions or regex patterns matched against a provided file argument.`,
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		file := args[0]
-
 		cfg, err := config.LoadConfig(cfgFile)
 		if err != nil {
 			return fmt.Errorf("error loading config: %w", err)
 		}
 
-		rule, err := matcher.Match(cfg.Rules, cfg.DefaultCommand, file)
-		if err != nil {
-			return fmt.Errorf("error matching rule: %w", err)
+		// 1. Try to match a specific rule if single argument
+		if len(args) == 1 {
+			rule, err := matcher.Match(cfg.Rules, "", args[0])
+			if err != nil {
+				return fmt.Errorf("error matching rule: %w", err)
+			}
+			if rule != nil {
+				return executor.Execute(rule.Command, args[0], dryRun)
+			}
 		}
 
-		if rule == nil {
-			fmt.Printf("No matching rule found for %s\n", file)
-			return nil
+		command := args[0]
+		cmdArgs := args[1:]
+
+		// 2. Check aliases
+		if alias, ok := cfg.Aliases[command]; ok {
+			command = alias
+			return executor.ExecuteCommand(command, cmdArgs, dryRun)
 		}
 
-		if err := executor.Execute(rule.Command, file, dryRun); err != nil {
-			return fmt.Errorf("error executing command: %w", err)
+		// 3. If single argument and default command exists, use it
+		if len(args) == 1 && cfg.DefaultCommand != "" {
+			return executor.Execute(cfg.DefaultCommand, args[0], dryRun)
 		}
 
-		return nil
+		// 4. Fallback to command execution
+		return executor.ExecuteCommand(command, cmdArgs, dryRun)
 	},
 }
 

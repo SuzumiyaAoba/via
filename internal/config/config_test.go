@@ -30,6 +30,8 @@ var _ = Describe("LoadConfig", func() {
 		BeforeEach(func() {
 			configContent := `
 version: "1"
+aliases:
+  grep: rg
 rules:
   - extensions: [txt]
     command: "echo text"
@@ -46,6 +48,7 @@ rules:
 			Expect(cfg).NotTo(BeNil())
 			Expect(cfg.Version).To(Equal("1"))
 			Expect(cfg.Rules).To(HaveLen(2))
+			Expect(cfg.Aliases).To(HaveKeyWithValue("grep", "rg"))
 
 			foundRegex := false
 			for _, rule := range cfg.Rules {

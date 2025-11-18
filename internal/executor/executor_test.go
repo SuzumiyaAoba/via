@@ -37,3 +37,21 @@ var _ = Describe("Execute", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
+
+var _ = Describe("ExecuteCommand", func() {
+	It("should execute command", func() {
+		// We use "true" as command which always succeeds
+		err := ExecuteCommand("true", []string{}, false)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should fail on invalid command", func() {
+		err := ExecuteCommand("nonexistentcommand", []string{}, false)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should print command in dry run mode", func() {
+		err := ExecuteCommand("echo", []string{"hello"}, true)
+		Expect(err).NotTo(HaveOccurred())
+	})
+})

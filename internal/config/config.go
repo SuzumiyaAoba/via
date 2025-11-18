@@ -17,9 +17,10 @@ type Rule struct {
 }
 
 type Config struct {
-	Version        string `yaml:"version"`
-	DefaultCommand string `yaml:"default_command,omitempty"`
-	Rules          []Rule `yaml:"rules"`
+	Version        string            `yaml:"version"`
+	DefaultCommand string            `yaml:"default_command,omitempty"`
+	Aliases        map[string]string `yaml:"aliases,omitempty"`
+	Rules          []Rule            `yaml:"rules"`
 }
 
 func LoadConfig(path string) (*Config, error) {
