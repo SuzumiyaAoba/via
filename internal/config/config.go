@@ -11,12 +11,15 @@ import (
 type Rule struct {
 	Extensions []string `yaml:"extensions,omitempty"`
 	Regex      string   `yaml:"regex,omitempty"`
+	Mime       string   `yaml:"mime,omitempty"`
+	OS         []string `yaml:"os,omitempty"`
 	Command    string   `yaml:"command"`
 }
 
 type Config struct {
-	Version string `yaml:"version"`
-	Rules   []Rule `yaml:"rules"`
+	Version        string `yaml:"version"`
+	DefaultCommand string `yaml:"default_command,omitempty"`
+	Rules          []Rule `yaml:"rules"`
 }
 
 func LoadConfig(path string) (*Config, error) {

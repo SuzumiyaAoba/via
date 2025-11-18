@@ -33,7 +33,7 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("error loading config: %w", err)
 		}
 
-		rule, err := matcher.Match(cfg.Rules, file)
+		rule, err := matcher.Match(cfg.Rules, cfg.DefaultCommand, file)
 		if err != nil {
 			return fmt.Errorf("error matching rule: %w", err)
 		}

@@ -3,6 +3,7 @@ module github.com/SuzumiyaAoba/entry
 go 1.25.2
 
 require (
+	github.com/gabriel-vasile/mimetype v1.4.11
 	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
 	github.com/spf13/cobra v1.10.1

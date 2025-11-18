@@ -24,6 +24,7 @@ var _ = Describe("Execute", func() {
 			}
 		},
 		Entry("Simple echo", "echo {{.File}}", "test.txt", false),
+		Entry("Extended variables", "echo {{.Dir}} {{.Base}} {{.Name}} {{.Ext}}", "test.txt", false),
 		Entry("Invalid template", "echo {{.File", "test.txt", true),
 		Entry("Command failure", "false", "test.txt", true),
 	)
