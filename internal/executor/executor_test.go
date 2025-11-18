@@ -1,50 +1,30 @@
-package executor
+package executor_test
 
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	. "github.com/SuzumiyaAoba/entry/internal/executor"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestExecute(t *testing.T) {
-	// Since Execute runs a command, we can test it by running a simple echo command
-	// and checking if it runs without error. Capturing stdout is harder without refactoring
-	// Execute to take an io.Writer, but for now we just check for errors.
-
-	tests := []struct {
-		name        string
-		commandTmpl string
-		file        string
-		wantErr     bool
-	}{
-		{
-			name:        "Simple echo",
-			commandTmpl: "echo {{.File}}",
-			file:        "test.txt",
-			wantErr:     false,
-		},
-		{
-			name:        "Invalid template",
-			commandTmpl: "echo {{.File",
-			file:        "test.txt",
-			wantErr:     true,
-		},
-		{
-			name:        "Command failure",
-			commandTmpl: "false",
-			file:        "test.txt",
-			wantErr:     true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := Execute(tt.commandTmpl, tt.file)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
+func TestExecutor(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Executor Suite")
 }
+
+var _ = Describe("Execute", func() {
+	DescribeTable("executing commands",
+		func(commandTmpl string, file string, wantErr bool) {
+			err := Execute(commandTmpl, file)
+			if wantErr {
+				Expect(err).To(HaveOccurred())
+			} else {
+				Expect(err).NotTo(HaveOccurred())
+			}
+		},
+		Entry("Simple echo", "echo {{.File}}", "test.txt", false),
+		Entry("Invalid template", "echo {{.File", "test.txt", true),
+		Entry("Command failure", "false", "test.txt", true),
+	)
+})
