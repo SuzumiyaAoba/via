@@ -10,10 +10,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+	dryRun  bool
+)
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/entry/config.yml)")
+	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "print command instead of executing")
 }
 
 var rootCmd = &cobra.Command{
@@ -39,7 +43,7 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		if err := executor.Execute(rule.Command, file); err != nil {
+		if err := executor.Execute(rule.Command, file, dryRun); err != nil {
 			return fmt.Errorf("error executing command: %w", err)
 		}
 

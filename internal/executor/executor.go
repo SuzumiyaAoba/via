@@ -12,7 +12,7 @@ type CommandData struct {
 	File string
 }
 
-func Execute(commandTmpl string, file string) error {
+func Execute(commandTmpl string, file string, dryRun bool) error {
 	tmpl, err := template.New("command").Parse(commandTmpl)
 	if err != nil {
 		return fmt.Errorf("failed to parse command template: %w", err)
@@ -25,11 +25,12 @@ func Execute(commandTmpl string, file string) error {
 	}
 
 	cmdStr := cmdBuf.String()
-	// Use shell to execute so we can handle arguments properly?
-	// Or just exec.Command if it's a simple command?
-	// The user might want to use pipes or flags.
-	// Let's use "sh -c" for flexibility on Mac/Linux.
-	
+
+	if dryRun {
+		fmt.Println(cmdStr)
+		return nil
+	}
+
 	cmd := exec.Command("sh", "-c", cmdStr)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

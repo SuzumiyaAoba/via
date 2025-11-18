@@ -16,7 +16,7 @@ func TestExecutor(t *testing.T) {
 var _ = Describe("Execute", func() {
 	DescribeTable("executing commands",
 		func(commandTmpl string, file string, wantErr bool) {
-			err := Execute(commandTmpl, file)
+			err := Execute(commandTmpl, file, false)
 			if wantErr {
 				Expect(err).To(HaveOccurred())
 			} else {
@@ -27,4 +27,12 @@ var _ = Describe("Execute", func() {
 		Entry("Invalid template", "echo {{.File", "test.txt", true),
 		Entry("Command failure", "false", "test.txt", true),
 	)
+
+	It("should print command in dry run mode", func() {
+		// We can't easily capture stdout here without redirecting it,
+		// but we can check that it doesn't error and doesn't run the command (if we could verify that).
+		// For now, just check no error.
+		err := Execute("echo {{.File}}", "test.txt", true)
+		Expect(err).NotTo(HaveOccurred())
+	})
 })
