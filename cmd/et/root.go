@@ -14,6 +14,8 @@ import (
 	"github.com/SuzumiyaAoba/entry/internal/executor"
 	"github.com/SuzumiyaAoba/entry/internal/matcher"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/spf13/cobra"
 )
@@ -124,54 +126,110 @@ var rootCmd = &cobra.Command{
 		// Explain mode: show detailed matching information
 		if explain && len(commandArgs) == 1 {
 			filename := commandArgs[0]
-			fmt.Fprintf(cmd.OutOrStdout(), "=== Explain Mode for: %s ===\n\n", filename)
+			
+			// Define styles
+			titleStyle := lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("12")).
+				Padding(0, 2).
+				MarginTop(1).
+				MarginBottom(1)
+			
+			sectionTitleStyle := lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("14")).
+				Padding(0, 1).
+				MarginTop(1)
+			
+			labelStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("8")).
+				Width(12)
+			
+			valueStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("15"))
+			
+			matchStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("10")).
+				Bold(true)
+			
+			skipStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("8")).
+				Faint(true)
+			
+			errorStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("9"))
+			
+			// Title
+			fmt.Fprintln(cmd.OutOrStdout(), titleStyle.Render("═══ EXPLAIN MODE ═══"))
+			fmt.Fprintln(cmd.OutOrStdout(), "")
 			
 			// Check if file/URL exists
 			u, err := url.Parse(filename)
 			isURL := err == nil && u.Scheme != ""
 			
+			// File Information Section
+			fmt.Fprintln(cmd.OutOrStdout(), sectionTitleStyle.Render("FILE INFORMATION"))
+			fmt.Fprintln(cmd.OutOrStdout(), "")
+			
+			fmt.Fprintln(cmd.OutOrStdout(), labelStyle.Render("  Path:")+" "+valueStyle.Render(filename))
+			
 			if isURL {
-				fmt.Fprintf(cmd.OutOrStdout(), "Type: URL\n")
-				fmt.Fprintf(cmd.OutOrStdout(), "Scheme: %s\n", u.Scheme)
+				fmt.Fprintln(cmd.OutOrStdout(), labelStyle.Render("  Type:")+" "+valueStyle.Render("URL"))
+				fmt.Fprintln(cmd.OutOrStdout(), labelStyle.Render("  Scheme:")+" "+valueStyle.Render(u.Scheme))
 				if u.Path != "" {
-					fmt.Fprintf(cmd.OutOrStdout(), "Path: %s\n", u.Path)
 					ext := filepath.Ext(u.Path)
 					if ext != "" {
-						fmt.Fprintf(cmd.OutOrStdout(), "Extension: %s\n", strings.TrimPrefix(ext, "."))
+						fmt.Fprintln(cmd.OutOrStdout(), labelStyle.Render("  Extension:")+" "+valueStyle.Render(strings.TrimPrefix(ext, ".")))
 					}
 				}
 			} else {
-				fmt.Fprintf(cmd.OutOrStdout(), "Type: File\n")
+				fmt.Fprintln(cmd.OutOrStdout(), labelStyle.Render("  Type:")+" "+valueStyle.Render("File"))
 				ext := filepath.Ext(filename)
 				if ext != "" {
-					fmt.Fprintf(cmd.OutOrStdout(), "Extension: %s\n", strings.TrimPrefix(ext, "."))
+					fmt.Fprintln(cmd.OutOrStdout(), labelStyle.Render("  Extension:")+" "+valueStyle.Render(strings.TrimPrefix(ext, ".")))
 				}
 				
 				// Check MIME type
 				if _, err := os.Stat(filename); err == nil {
 					mtype, err := mimetype.DetectFile(filename)
 					if err == nil {
-						fmt.Fprintf(cmd.OutOrStdout(), "MIME Type: %s\n", mtype.String())
+						fmt.Fprintln(cmd.OutOrStdout(), labelStyle.Render("  MIME Type:")+" "+valueStyle.Render(mtype.String()))
 					}
 				} else {
-					fmt.Fprintf(cmd.OutOrStdout(), "File Status: Does not exist\n")
+					fmt.Fprintln(cmd.OutOrStdout(), labelStyle.Render("  Status:")+" "+errorStyle.Render("Does not exist"))
 				}
 			}
 			
-			fmt.Fprintf(cmd.OutOrStdout(), "\n=== Rule Evaluation ===\n\n")
+			// Rule Evaluation Section
+			fmt.Fprintln(cmd.OutOrStdout(), "")
+			fmt.Fprintln(cmd.OutOrStdout(), sectionTitleStyle.Render("RULE EVALUATION"))
+			fmt.Fprintln(cmd.OutOrStdout(), "")
 			
-			// Evaluate each rule
+			// Prepare table data
+			type ruleResult struct {
+				num        string
+				name       string
+				conditions []string
+				result     string
+				matched    bool
+			}
+			
+			var results []ruleResult
 			matched := false
+			
 			for i, rule := range cfg.Rules {
-				fmt.Fprintf(cmd.OutOrStdout(), "Rule #%d:\n", i+1)
-				if rule.Name != "" {
-					fmt.Fprintf(cmd.OutOrStdout(), "  Name: %s\n", rule.Name)
+				result := ruleResult{
+					num:  fmt.Sprintf("%d", i+1),
+					name: rule.Name,
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "  Command: %s\n", rule.Command)
+				
+				if result.name == "" {
+					result.name = "-"
+				}
 				
 				// Check each condition
 				ruleMatched := false
-				reasons := []string{}
+				var matchReasons []string
 				
 				// OS check
 				if len(rule.OS) > 0 {
@@ -183,10 +241,12 @@ var rootCmd = &cobra.Command{
 						}
 					}
 					if osMatch {
-						reasons = append(reasons, fmt.Sprintf("OS matches (%s)", runtime.GOOS))
+						result.conditions = append(result.conditions, "✓ OS: "+runtime.GOOS)
+						matchReasons = append(matchReasons, "OS")
 					} else {
-						fmt.Fprintf(cmd.OutOrStdout(), "  ❌ OS mismatch (requires: %v, current: %s)\n", rule.OS, runtime.GOOS)
-						fmt.Fprintf(cmd.OutOrStdout(), "\n")
+						result.conditions = append(result.conditions, "✗ OS mismatch")
+						result.result = errorStyle.Render("SKIP")
+						results = append(results, result)
 						continue
 					}
 				}
@@ -194,11 +254,13 @@ var rootCmd = &cobra.Command{
 				// Scheme check
 				if rule.Scheme != "" {
 					if isURL && strings.ToLower(u.Scheme) == strings.ToLower(rule.Scheme) {
-						reasons = append(reasons, fmt.Sprintf("Scheme matches (%s)", rule.Scheme))
+						result.conditions = append(result.conditions, "✓ Scheme: "+rule.Scheme)
+						matchReasons = append(matchReasons, "Scheme")
 						ruleMatched = true
-					} else if rule.Scheme != "" {
-						fmt.Fprintf(cmd.OutOrStdout(), "  ❌ Scheme mismatch (requires: %s)\n", rule.Scheme)
-						fmt.Fprintf(cmd.OutOrStdout(), "\n")
+					} else {
+						result.conditions = append(result.conditions, "✗ Scheme: "+rule.Scheme)
+						result.result = errorStyle.Render("SKIP")
+						results = append(results, result)
 						continue
 					}
 				}
@@ -213,15 +275,18 @@ var rootCmd = &cobra.Command{
 					}
 					pathExt = strings.ToLower(strings.TrimPrefix(pathExt, "."))
 					
+					extMatched := false
 					for _, ruleExt := range rule.Extensions {
 						if strings.ToLower(ruleExt) == pathExt {
-							reasons = append(reasons, fmt.Sprintf("Extension matches (.%s)", pathExt))
+							result.conditions = append(result.conditions, "✓ Ext: ."+pathExt)
+							matchReasons = append(matchReasons, "Extension")
 							ruleMatched = true
+							extMatched = true
 							break
 						}
 					}
-					if !ruleMatched {
-						fmt.Fprintf(cmd.OutOrStdout(), "  Extensions: %v (no match)\n", rule.Extensions)
+					if !extMatched {
+						result.conditions = append(result.conditions, skipStyle.Render("○ Ext: "+fmt.Sprintf("%v", rule.Extensions)))
 					}
 				}
 				
@@ -229,10 +294,11 @@ var rootCmd = &cobra.Command{
 				if !ruleMatched && rule.Regex != "" {
 					regexMatched, _ := regexp.MatchString(rule.Regex, filename)
 					if regexMatched {
-						reasons = append(reasons, fmt.Sprintf("Regex matches (%s)", rule.Regex))
+						result.conditions = append(result.conditions, "✓ Regex")
+						matchReasons = append(matchReasons, "Regex")
 						ruleMatched = true
 					} else {
-						fmt.Fprintf(cmd.OutOrStdout(), "  Regex: %s (no match)\n", rule.Regex)
+						result.conditions = append(result.conditions, skipStyle.Render("○ Regex: "+rule.Regex))
 					}
 				}
 				
@@ -243,42 +309,74 @@ var rootCmd = &cobra.Command{
 						if err == nil {
 							mimeMatched, _ := regexp.MatchString(rule.Mime, mtype.String())
 							if mimeMatched {
-								reasons = append(reasons, fmt.Sprintf("MIME matches (%s)", rule.Mime))
+								result.conditions = append(result.conditions, "✓ MIME")
+								matchReasons = append(matchReasons, "MIME")
 								ruleMatched = true
 							} else {
-								fmt.Fprintf(cmd.OutOrStdout(), "  MIME: %s (no match)\n", rule.Mime)
+								result.conditions = append(result.conditions, skipStyle.Render("○ MIME: "+rule.Mime))
 							}
 						}
 					}
 				}
 				
 				if ruleMatched {
-					fmt.Fprintf(cmd.OutOrStdout(), "  ✅ MATCHED: %s\n", strings.Join(reasons, ", "))
+					result.result = matchStyle.Render("[MATCH]")
 					if rule.Fallthrough {
-						fmt.Fprintf(cmd.OutOrStdout(), "  Fallthrough: true (will continue to next rule)\n")
-					} else {
-						fmt.Fprintf(cmd.OutOrStdout(), "  Fallthrough: false (will stop here)\n")
+						result.result += skipStyle.Render(" →")
 					}
+					result.matched = true
 					matched = true
+					results = append(results, result)
 					if !rule.Fallthrough {
-						fmt.Fprintf(cmd.OutOrStdout(), "\n")
 						break
 					}
+				} else {
+					result.result = skipStyle.Render("—")
+					results = append(results, result)
 				}
-				
-				fmt.Fprintf(cmd.OutOrStdout(), "\n")
 			}
 			
-			if !matched {
-				fmt.Fprintf(cmd.OutOrStdout(), "No rules matched.\n\n")
-				if cfg.DefaultCommand != "" {
-					fmt.Fprintf(cmd.OutOrStdout(), "=== Default Command ===\n")
-					fmt.Fprintf(cmd.OutOrStdout(), "Command: %s\n", cfg.DefaultCommand)
-				} else {
-					fmt.Fprintf(cmd.OutOrStdout(), "=== System Default ===\n")
-					fmt.Fprintf(cmd.OutOrStdout(), "Will use system default application.\n")
-				}
+			// Create table
+			t := table.New().
+				Border(lipgloss.RoundedBorder()).
+				BorderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("8"))).
+				StyleFunc(func(row, col int) lipgloss.Style {
+					if row == 0 {
+						return lipgloss.NewStyle().
+							Foreground(lipgloss.Color("14")).
+							Bold(true).
+							Padding(0, 1)
+					}
+					return lipgloss.NewStyle().Padding(0, 1)
+				}).
+				Headers("#", "Rule Name", "Conditions", "Result")
+			
+			for _, r := range results {
+				condStr := strings.Join(r.conditions, "\n")
+				t.Row(r.num, r.name, condStr, r.result)
 			}
+			
+			fmt.Fprintln(cmd.OutOrStdout(), t.Render())
+			
+			// Result Section
+			fmt.Fprintln(cmd.OutOrStdout(), "")
+			fmt.Fprintln(cmd.OutOrStdout(), sectionTitleStyle.Render("RESULT"))
+			fmt.Fprintln(cmd.OutOrStdout(), "")
+			
+			if !matched {
+				fmt.Fprintln(cmd.OutOrStdout(), "  "+skipStyle.Render("No rules matched."))
+				fmt.Fprintln(cmd.OutOrStdout(), "")
+				if cfg.DefaultCommand != "" {
+					fmt.Fprintln(cmd.OutOrStdout(), "  "+labelStyle.Render("Action:")+" "+valueStyle.Render("Execute default command"))
+					fmt.Fprintln(cmd.OutOrStdout(), "  "+labelStyle.Render("Command:")+" "+valueStyle.Render(cfg.DefaultCommand))
+				} else {
+					fmt.Fprintln(cmd.OutOrStdout(), "  "+labelStyle.Render("Action:")+" "+valueStyle.Render("Use system default application"))
+				}
+			} else {
+				fmt.Fprintln(cmd.OutOrStdout(), "  "+matchStyle.Render("[OK] Rule matched successfully"))
+			}
+			
+			fmt.Fprintln(cmd.OutOrStdout(), "")
 			
 			return nil
 		}
