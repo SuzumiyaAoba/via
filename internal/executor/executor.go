@@ -3,6 +3,7 @@ package executor
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,7 +21,7 @@ type CommandData struct {
 
 var cmdBuf bytes.Buffer
 
-func Execute(commandTmpl string, file string, dryRun bool) error {
+func Execute(out io.Writer, commandTmpl string, file string, dryRun bool) error {
 	cmdBuf.Reset()
 	tmpl, err := template.New("command").Parse(commandTmpl)
 	if err != nil {
@@ -52,13 +53,13 @@ func Execute(commandTmpl string, file string, dryRun bool) error {
 	cmdStr := cmdBuf.String()
 
 	if dryRun {
-		fmt.Println(cmdStr)
+		fmt.Fprintln(out, cmdStr)
 		return nil
 	}
 
 	cmd := exec.Command("sh", "-c", cmdStr)
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = out
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
@@ -68,15 +69,15 @@ func Execute(commandTmpl string, file string, dryRun bool) error {
 	return nil
 }
 
-func ExecuteCommand(command string, args []string, dryRun bool) error {
+func ExecuteCommand(out io.Writer, command string, args []string, dryRun bool) error {
 	if dryRun {
-		fmt.Printf("%s %s\n", command, strings.Join(args, " "))
+		fmt.Fprintf(out, "%s %s\n", command, strings.Join(args, " "))
 		return nil
 	}
 
 	cmd := exec.Command(command, args...)
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = out
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {

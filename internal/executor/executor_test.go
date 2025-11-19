@@ -16,7 +16,7 @@ func TestExecutor(t *testing.T) {
 var _ = Describe("Execute", func() {
 	DescribeTable("executing commands",
 		func(commandTmpl string, file string, wantErr bool) {
-			err := Execute(commandTmpl, file, false)
+			err := Execute(GinkgoWriter, commandTmpl, file, false)
 			if wantErr {
 				Expect(err).To(HaveOccurred())
 			} else {
@@ -33,7 +33,7 @@ var _ = Describe("Execute", func() {
 		// We can't easily capture stdout here without redirecting it,
 		// but we can check that it doesn't error and doesn't run the command (if we could verify that).
 		// For now, just check no error.
-		err := Execute("echo {{.File}}", "test.txt", true)
+		err := Execute(GinkgoWriter, "echo {{.File}}", "test.txt", true)
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
@@ -41,17 +41,17 @@ var _ = Describe("Execute", func() {
 var _ = Describe("ExecuteCommand", func() {
 	It("should execute command", func() {
 		// We use "true" as command which always succeeds
-		err := ExecuteCommand("true", []string{}, false)
+		err := ExecuteCommand(GinkgoWriter, "true", []string{}, false)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should fail on invalid command", func() {
-		err := ExecuteCommand("nonexistentcommand", []string{}, false)
+		err := ExecuteCommand(GinkgoWriter, "nonexistentcommand", []string{}, false)
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("should print command in dry run mode", func() {
-		err := ExecuteCommand("echo", []string{"hello"}, true)
+		err := ExecuteCommand(GinkgoWriter, "echo", []string{"hello"}, true)
 		Expect(err).NotTo(HaveOccurred())
 	})
 })

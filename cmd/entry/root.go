@@ -38,7 +38,7 @@ var rootCmd = &cobra.Command{
 				return fmt.Errorf("error matching rule: %w", err)
 			}
 			if rule != nil {
-				return executor.Execute(rule.Command, args[0], dryRun)
+				return executor.Execute(cmd.OutOrStdout(), rule.Command, args[0], dryRun)
 			}
 		}
 
@@ -48,16 +48,16 @@ var rootCmd = &cobra.Command{
 		// 2. Check aliases
 		if alias, ok := cfg.Aliases[command]; ok {
 			command = alias
-			return executor.ExecuteCommand(command, cmdArgs, dryRun)
+			return executor.ExecuteCommand(cmd.OutOrStdout(), command, cmdArgs, dryRun)
 		}
 
 		// 3. If single argument and default command exists, use it
 		if len(args) == 1 && cfg.DefaultCommand != "" {
-			return executor.Execute(cfg.DefaultCommand, args[0], dryRun)
+			return executor.Execute(cmd.OutOrStdout(), cfg.DefaultCommand, args[0], dryRun)
 		}
 
 		// 4. Fallback to command execution
-		return executor.ExecuteCommand(command, cmdArgs, dryRun)
+		return executor.ExecuteCommand(cmd.OutOrStdout(), command, cmdArgs, dryRun)
 	},
 }
 
