@@ -1,0 +1,61 @@
+version: 2
+
+project_name: et
+
+builds:
+  - binary: et
+    main: ./cmd/et
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    # this name template makes the tar.gz only contain the binary name
+    # name_template: >-
+    #   {{ .ProjectName }}_
+    #   {{- .Os }}_
+    #   {{- .Arch }}
+    #   {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+brews:
+  - name: et
+    repository:
+      owner: SuzumiyaAoba
+      name: homebrew-et
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    
+    # Git author used to commit to the repository.
+    # Defaults are shown.
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+
+    # The project name and description.
+    description: "Entry (et) is a CLI file association tool."
+    homepage: "https://github.com/SuzumiyaAoba/entry"
+
+    # Template for the install section.
+    install: |
+      bin.install "et"
+

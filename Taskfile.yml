@@ -1,0 +1,27 @@
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - task: build
+
+  build:
+    desc: Build the binary
+    cmds:
+      - go build -o et ./cmd/et
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+
+  clean:
+    desc: Clean artifacts
+    cmds:
+      - rm -f et
+      - rm -rf dist
+
+  release:
+    desc: Create a snapshot release
+    cmds:
+      - goreleaser release --snapshot --clean
