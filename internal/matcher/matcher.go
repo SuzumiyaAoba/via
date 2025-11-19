@@ -11,13 +11,17 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 )
 
-func Match(rules []config.Rule, filename string) (*config.Rule, error) {
-
+func Match(rules []config.Rule, filename string) ([]*config.Rule, error) {
+	var matches []*config.Rule
+	
 	// Check Scheme
 	u, err := url.Parse(filename)
 	isURL := err == nil && u.Scheme != ""
 
-	for _, rule := range rules {
+	for i := range rules {
+		rule := &rules[i]
+		matched := false
+		
 		// Check OS
 		if len(rule.OS) > 0 {
 			matchedOS := false
@@ -35,16 +39,15 @@ func Match(rules []config.Rule, filename string) (*config.Rule, error) {
 		// Check Scheme
 		if rule.Scheme != "" {
 			if isURL && strings.ToLower(u.Scheme) == strings.ToLower(rule.Scheme) {
-				return &rule, nil
+				matched = true
+			} else {
+				// If scheme is specified but doesn't match, skip this rule
+				continue
 			}
 		}
 
-		// Check extensions (only if not a URL, or if URL has extension?)
-		// URLs can have extensions (e.g. image.png).
-		// But if it's a URL, we might want to prioritize Scheme or Regex.
-		// Let's check extensions for URLs too.
-		if len(rule.Extensions) > 0 {
-			// For URL, get path extension
+		// Check extensions
+		if !matched && len(rule.Extensions) > 0 {
 			var pathExt string
 			if isURL {
 				pathExt = filepath.Ext(u.Path)
@@ -55,7 +58,91 @@ func Match(rules []config.Rule, filename string) (*config.Rule, error) {
 
 			for _, ruleExt := range rule.Extensions {
 				if strings.ToLower(ruleExt) == pathExt {
-					return &rule, nil
+					matched = true
+					break
+				}
+			}
+		}
+
+		// Check regex
+		if !matched && rule.Regex != "" {
+			regexMatched, err := regexp.MatchString(rule.Regex, filename)
+			if err != nil {
+				return nil, err
+			}
+			if regexMatched {
+				matched = true
+			}
+		}
+
+		// Check MIME type
+		if !matched && rule.Mime != "" && !isURL {
+			mtype, err := mimetype.DetectFile(filename)
+			if err == nil {
+				mimeMatched, err := regexp.MatchString(rule.Mime, mtype.String())
+				if err == nil && mimeMatched {
+					matched = true
+				}
+			}
+		}
+
+		if matched {
+			matches = append(matches, rule)
+			if !rule.Fallthrough {
+				break
+			}
+		}
+	}
+
+	return matches, nil
+}
+
+
+func MatchAll(rules []config.Rule, filename string) ([]*config.Rule, error) {
+	var matches []*config.Rule
+
+	// Check Scheme
+	u, err := url.Parse(filename)
+	isURL := err == nil && u.Scheme != ""
+
+	for i := range rules {
+		rule := &rules[i]
+		// Check OS
+		if len(rule.OS) > 0 {
+			matchedOS := false
+			for _, osName := range rule.OS {
+				if strings.ToLower(osName) == runtime.GOOS {
+					matchedOS = true
+					break
+				}
+			}
+			if !matchedOS {
+				continue
+			}
+		}
+
+		// Check Scheme
+		if rule.Scheme != "" {
+			if isURL && strings.ToLower(u.Scheme) == strings.ToLower(rule.Scheme) {
+				matches = append(matches, rule)
+				continue
+			}
+		}
+
+		// Check extensions
+		if len(rule.Extensions) > 0 {
+			var pathExt string
+			if isURL {
+				pathExt = filepath.Ext(u.Path)
+			} else {
+				pathExt = filepath.Ext(filename)
+			}
+			pathExt = strings.ToLower(strings.TrimPrefix(pathExt, "."))
+
+			for _, ruleExt := range rule.Extensions {
+				if strings.ToLower(ruleExt) == pathExt {
+					matches = append(matches, rule)
+					goto NextRule
 				}
 			}
 		}
@@ -67,30 +154,25 @@ func Match(rules []config.Rule, filename string) (*config.Rule, error) {
 				return nil, err
 			}
 			if matched {
-				return &rule, nil
-			}
-		}
-
-		// Check MIME type (Only for files, unless we fetch URL?)
-		// Skip MIME check for URLs for now
-		if rule.Mime != "" && !isURL {
-			mtype, err := mimetype.DetectFile(filename)
-			if err != nil {
-				// If file cannot be read, ignore MIME match? Or return error?
-				// For now, ignore and continue to next rule.
+				matches = append(matches, rule)
 				continue
 			}
-			// Use regex for MIME match? Or exact match?
-			// Let's use regex for flexibility (e.g. "image/.*").
-			matched, err := regexp.MatchString(rule.Mime, mtype.String())
-			if err != nil {
-				return nil, err
-			}
-			if matched {
-				return &rule, nil
+		}
+
+		// Check MIME type
+		if rule.Mime != "" && !isURL {
+			mtype, err := mimetype.DetectFile(filename)
+			if err == nil {
+				matched, err := regexp.MatchString(rule.Mime, mtype.String())
+				if err == nil && matched {
+					matches = append(matches, rule)
+					continue
+				}
 			}
 		}
+
+	NextRule:
 	}
 
-	return nil, nil
+	return matches, nil
 }

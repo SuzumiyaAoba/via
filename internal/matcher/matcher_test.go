@@ -94,10 +94,10 @@ var _ = Describe("Match", func() {
 			}
 
 			if wantCmd != "" {
-				Expect(got).NotTo(BeNil())
-				Expect(got.Command).To(Equal(wantCmd))
+				Expect(got).NotTo(BeEmpty())
+				Expect(got[0].Command).To(Equal(wantCmd))
 			} else {
-				Expect(got).To(BeNil())
+				Expect(got).To(BeEmpty())
 			}
 		},
 		Entry("Match extension txt", "file.txt", "echo text", false),
