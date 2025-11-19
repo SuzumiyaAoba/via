@@ -11,7 +11,6 @@ import (
 
 	"github.com/SuzumiyaAoba/entry/internal/config"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/spf13/cobra"
 )
@@ -62,8 +61,7 @@ func handleExplain(cmd *cobra.Command, cfg *config.Config, filename string) erro
 	fmt.Fprintln(cmd.OutOrStdout(), "")
 	
 	// Check if file/URL exists
-	u, err := url.Parse(filename)
-	isURL := err == nil && u.Scheme != ""
+	isURLType := isURL(filename)
 	
 	// File Information Section
 	fmt.Fprintln(cmd.OutOrStdout(), sectionTitleStyle.Render("FILE INFORMATION"))
@@ -71,8 +69,9 @@ func handleExplain(cmd *cobra.Command, cfg *config.Config, filename string) erro
 	
 	fmt.Fprintln(cmd.OutOrStdout(), labelStyle.Render("  Path:")+" "+valueStyle.Render(filename))
 	
-	if isURL {
+	if isURLType {
 		fmt.Fprintln(cmd.OutOrStdout(), labelStyle.Render("  Type:")+" "+valueStyle.Render("URL"))
+		u, _ := url.Parse(filename)
 		fmt.Fprintln(cmd.OutOrStdout(), labelStyle.Render("  Scheme:")+" "+valueStyle.Render(u.Scheme))
 		if u.Path != "" {
 			ext := filepath.Ext(u.Path)
@@ -143,7 +142,8 @@ func handleExplain(cmd *cobra.Command, cfg *config.Config, filename string) erro
 		
 		// Scheme check
 		if rule.Scheme != "" {
-			if isURL && strings.ToLower(u.Scheme) == strings.ToLower(rule.Scheme) {
+			u, _ := url.Parse(filename)
+			if isURLType && strings.ToLower(u.Scheme) == strings.ToLower(rule.Scheme) {
 				result.conditions = append(result.conditions, "✓ Scheme: "+rule.Scheme)
 				matchReasons = append(matchReasons, "Scheme")
 				ruleMatched = true
@@ -158,7 +158,8 @@ func handleExplain(cmd *cobra.Command, cfg *config.Config, filename string) erro
 		// Extension check
 		if !ruleMatched && len(rule.Extensions) > 0 {
 			var pathExt string
-			if isURL {
+			if isURLType {
+				u, _ := url.Parse(filename)
 				pathExt = filepath.Ext(u.Path)
 			} else {
 				pathExt = filepath.Ext(filename)
@@ -193,7 +194,7 @@ func handleExplain(cmd *cobra.Command, cfg *config.Config, filename string) erro
 		}
 		
 		// MIME check
-		if !ruleMatched && rule.Mime != "" && !isURL {
+		if !ruleMatched && rule.Mime != "" && !isURLType {
 			if _, err := os.Stat(filename); err == nil {
 				mtype, err := mimetype.DetectFile(filename)
 				if err == nil {
@@ -226,27 +227,20 @@ func handleExplain(cmd *cobra.Command, cfg *config.Config, filename string) erro
 		}
 	}
 	
-	// Create table
-	t := table.New().
-		Border(lipgloss.RoundedBorder()).
-		BorderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("8"))).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			if row == 0 {
-				return lipgloss.NewStyle().
-					Foreground(lipgloss.Color("14")).
-					Bold(true).
-					Padding(0, 1)
-			}
-			return lipgloss.NewStyle().Padding(0, 1)
-		}).
-		Headers("#", "Rule Name", "Conditions", "Result")
-	
-	for _, r := range results {
-		condStr := strings.Join(r.conditions, "\n")
-		t.Row(r.num, r.name, condStr, r.result)
+	// Prepare table rows
+	rows := make([][]string, len(results))
+	for i, r := range results {
+		rows[i] = []string{
+			r.num,
+			r.name,
+			strings.Join(r.conditions, "\n"),
+			r.result,
+		}
 	}
-	
-	fmt.Fprintln(cmd.OutOrStdout(), t.Render())
+
+	// Render table
+	headers := []string{"#", "Rule Name", "Conditions", "Result"}
+	fmt.Fprintln(cmd.OutOrStdout(), createStyledTable(headers, rows))
 	
 	// Result Section
 	fmt.Fprintln(cmd.OutOrStdout(), "")

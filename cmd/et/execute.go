@@ -2,53 +2,27 @@ package main
 
 import (
 	"fmt"
-	"net/url"
-	"os"
 	os_exec "os/exec"
 
 	"github.com/SuzumiyaAoba/entry/internal/config"
 	"github.com/SuzumiyaAoba/entry/internal/executor"
-	"github.com/SuzumiyaAoba/entry/internal/matcher"
 )
 
 func handleFileExecution(cfg *config.Config, exec *executor.Executor, filename string) error {
-	// Non-interactive normal flow
-	rules, err := matcher.Match(cfg.Rules, filename)
+	// Try to match rules
+	rules, err := matchRules(cfg, filename)
 	if err != nil {
 		return fmt.Errorf("error matching rule: %w", err)
 	}
+
+	// Execute matched rules (with fallthrough support)
 	if len(rules) > 0 {
-		// Execute all matched rules (fallthrough support)
-		for _, rule := range rules {
-			opts := executor.ExecutionOptions{
-				Background: rule.Background,
-				Terminal:   rule.Terminal,
-			}
-			if err := exec.Execute(rule.Command, filename, opts); err != nil {
-				return err
-			}
-		}
-		return nil
+		return executeRules(exec, rules, filename)
 	}
 
-	// Check if it is a URL or File
-	isURL := false
-	if u, err := url.Parse(filename); err == nil && u.Scheme != "" {
-		isURL = true
-	}
-	
-	if isURL {
-		if cfg.DefaultCommand != "" {
-			return exec.Execute(cfg.DefaultCommand, filename, executor.ExecutionOptions{})
-		}
-		return exec.OpenSystem(filename)
-	}
-
-	if _, err := os.Stat(filename); err == nil {
-		if cfg.DefaultCommand != "" {
-			return exec.Execute(cfg.DefaultCommand, filename, executor.ExecutionOptions{})
-		}
-		return exec.OpenSystem(filename)
+	// Use default command or system opener for files/URLs
+	if isFileOrURL(filename) {
+		return executeWithDefault(cfg, exec, filename)
 	}
 
 	// File not found - caller should handle this as a command
@@ -76,9 +50,4 @@ func handleCommandExecution(cfg *config.Config, exec *executor.Executor, command
 	}
 
 	return exec.ExecuteCommand(command, cmdArgs)
-}
-
-func fileExists(filename string) bool {
-	_, err := os.Stat(filename)
-	return err == nil
 }
