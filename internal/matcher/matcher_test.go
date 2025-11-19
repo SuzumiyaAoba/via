@@ -86,7 +86,7 @@ var _ = Describe("Match", func() {
 
 	DescribeTable("matching files against rules",
 		func(filename string, wantCmd string, wantErr bool) {
-			got, err := Match(rules, "echo default", filename)
+			got, err := Match(rules, filename)
 			if wantErr {
 				Expect(err).To(HaveOccurred())
 			} else {
@@ -106,8 +106,8 @@ var _ = Describe("Match", func() {
 		Entry("Match mime image", "image.png", "echo image", false),
 		Entry("Match extension go", "main.go", "echo go", false),
 		Entry("Match OS specific", "script.sh", "echo sh", false),
-		Entry("No match OS mismatch", "script.bat", "echo default", false),
-		Entry("No match", "unknown.dat", "echo default", false),
+		Entry("No match OS mismatch", "script.bat", "", false),
+		Entry("No match", "unknown.dat", "", false),
 		Entry("Case insensitive extension", "FILE.TXT", "echo text", false),
 		Entry("Match URL scheme https", "https://google.com", "open browser", false),
 		Entry("Match URL scheme mailto", "mailto:user@example.com", "open mail", false),

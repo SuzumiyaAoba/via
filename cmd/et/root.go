@@ -24,7 +24,7 @@ func init() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "entry <file>",
+	Use:   "et <file>",
 	Short: "Entry is a CLI file association tool",
 	Long:  `Entry allows you to execute specific commands based on file extensions or regex patterns matched against a provided file argument.`,
 	Args:               cobra.MinimumNArgs(1),
@@ -34,6 +34,13 @@ var rootCmd = &cobra.Command{
 		var commandArgs []string
 		for i := 0; i < len(args); i++ {
 			arg := args[i]
+			if arg == "--version" || arg == "-v" {
+				fmt.Println("et v0.1.0")
+				return nil
+			}
+			if arg == "--help" || arg == "-h" {
+				return cmd.Help()
+			}
 			if arg == "--dry-run" {
 				dryRun = true
 				continue

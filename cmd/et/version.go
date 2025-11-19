@@ -14,6 +14,6 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of entry",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("entry v0.1.0")
+		fmt.Println("et v0.1.0")
 	},
 }
