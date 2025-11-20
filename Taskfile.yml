@@ -5,10 +5,14 @@ tasks:
     cmds:
       - task: build
 
+  vars:
+    VERSION:
+      sh: git describe --tags --always --dirty
+
   build:
     desc: Build the binary
     cmds:
-      - go build -o et ./cmd/et
+      - go build -ldflags "-X github.com/SuzumiyaAoba/entry/internal/cli.Version={{.VERSION}}" -o et ./cmd/et
 
   test:
     desc: Run tests
