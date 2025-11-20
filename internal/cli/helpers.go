@@ -7,6 +7,7 @@ import (
 
 	"github.com/SuzumiyaAoba/entry/internal/config"
 	"github.com/SuzumiyaAoba/entry/internal/executor"
+	"github.com/SuzumiyaAoba/entry/internal/logger"
 	"github.com/SuzumiyaAoba/entry/internal/matcher"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
@@ -37,13 +38,16 @@ func isFileOrURL(filename string) bool {
 // executeWithDefault executes the filename with either the default command or system default
 func executeWithDefault(cfg *config.Config, exec *executor.Executor, filename string) error {
 	if cfg.DefaultCommand != "" {
+		logger.Debug("Executing with default command: %s", cfg.DefaultCommand)
 		return exec.Execute(cfg.DefaultCommand, filename, executor.ExecutionOptions{})
 	}
+	logger.Debug("Opening with system default")
 	return exec.OpenSystem(filename)
 }
 
 // executeRule executes a single rule with the appropriate options
 func executeRule(exec *executor.Executor, rule *config.Rule, filename string) error {
+	logger.Debug("Executing rule '%s' with command: %s", rule.Name, rule.Command)
 	opts := executor.ExecutionOptions{
 		Background: rule.Background,
 		Terminal:   rule.Terminal,
@@ -53,6 +57,7 @@ func executeRule(exec *executor.Executor, rule *config.Rule, filename string) er
 
 // executeRules executes all matched rules (with fallthrough support)
 func executeRules(exec *executor.Executor, rules []*config.Rule, filename string) error {
+	logger.Info("Executing %d matched rules for %s", len(rules), filename)
 	for _, rule := range rules {
 		if err := executeRule(exec, rule, filename); err != nil {
 			return err
@@ -63,7 +68,14 @@ func executeRules(exec *executor.Executor, rules []*config.Rule, filename string
 
 // matchRules matches rules against a filename and returns matched rules
 func matchRules(cfg *config.Config, filename string) ([]*config.Rule, error) {
-	return matcher.Match(cfg.Rules, filename)
+	logger.Debug("Matching rules for file: %s", filename)
+	matched, err := matcher.Match(cfg.Rules, filename)
+	if err != nil {
+		logger.Error("Failed to match rules: %v", err)
+		return nil, err
+	}
+	logger.Debug("Found %d matching rules", len(matched))
+	return matched, nil
 }
 
 // Option helpers for interactive mode
@@ -78,11 +90,14 @@ func buildOptionLabel(rule *config.Rule) string {
 
 // buildInteractiveOptions creates a list of options from matched rules and adds system default
 func buildInteractiveOptions(cfg *config.Config, filename string) ([]Option, error) {
+	logger.Debug("Building interactive options for: %s", filename)
 	matches, err := matcher.MatchAll(cfg.Rules, filename)
 	if err != nil {
+		logger.Error("Error matching rules for interactive mode: %v", err)
 		return nil, fmt.Errorf("error matching rules: %w", err)
 	}
 
+	logger.Debug("Found %d potential options", len(matches))
 	var options []Option
 	for _, m := range matches {
 		options = append(options, Option{
@@ -93,12 +108,14 @@ func buildInteractiveOptions(cfg *config.Config, filename string) ([]Option, err
 
 	// Add System Default if the file exists or is a URL
 	if isFileOrURL(filename) {
+		logger.Debug("Adding system default option")
 		options = append(options, Option{
 			Label:    "System Default",
 			IsSystem: true,
 		})
 	}
 
+	logger.Info("Built %d interactive options", len(options))
 	return options, nil
 }
 

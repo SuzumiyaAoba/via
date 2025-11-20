@@ -70,6 +70,25 @@ func GetConfigPath(path string) (string, error) {
 	return filepath.Join(home, ".config", "entry", "config.yml"), nil
 }
 
+// GetConfigPathWithProfile returns the config file path for a specific profile
+// If profile is empty, returns the default config path
+func GetConfigPathWithProfile(path string, profile string) (string, error) {
+	if path != "" {
+		return path, nil
+	}
+	
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user home dir: %w", err)
+	}
+	
+	if profile == "" {
+		return filepath.Join(home, ".config", "entry", "config.yml"), nil
+	}
+	
+	return filepath.Join(home, ".config", "entry", "profiles", profile+".yml"), nil
+}
+
 func SaveConfig(path string, cfg *Config) error {
 	configPath, err := GetConfigPath(path)
 	if err != nil {
@@ -111,4 +130,10 @@ func ValidateConfig(cfg *Config) error {
 		}
 	}
 	return nil
+}
+
+// ValidateRegex validates a regex pattern
+func ValidateRegex(pattern string) error {
+	_, err := regexp.Compile(pattern)
+	return err
 }

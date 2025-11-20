@@ -37,3 +37,11 @@ var configSetDefaultCmd = &cobra.Command{
 		return runConfigSetDefault(args[0])
 	},
 }
+
+var configEditCmd = &cobra.Command{
+	Use:   "edit",
+	Short: "Edit an existing rule interactively",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runConfigEdit()
+	},
+}

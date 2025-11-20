@@ -6,6 +6,7 @@ import (
 
 	"github.com/SuzumiyaAoba/entry/internal/config"
 	"github.com/SuzumiyaAoba/entry/internal/executor"
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -53,8 +54,12 @@ func init() {
 	configAddCmd.MarkFlagRequired("cmd")
 
 	configCmd.AddCommand(configInitCmd)
+	configCmd.AddCommand(configCheckCmd)
 	configCmd.AddCommand(configRemoveCmd)
 	configCmd.AddCommand(configSetDefaultCmd)
+	configCmd.AddCommand(configEditCmd)
+	configCmd.AddCommand(configProfileListCmd)
+	configCmd.AddCommand(configProfileCopyCmd)
 }
 
 func runConfigList() error {
@@ -219,4 +224,219 @@ func runConfigSetDefault(command string) error {
 
 	fmt.Println("Default command updated successfully")
 	return nil
+}
+
+func runConfigEdit() error {
+	cfg, err := config.LoadConfig(cfgFile)
+	if err != nil {
+		return err
+	}
+
+	if len(cfg.Rules) == 0 {
+		return fmt.Errorf("no rules available to edit")
+	}
+
+	// Build rule options for selection
+	type ruleOption struct {
+		Label string
+		Index int
+	}
+
+	var ruleOptions []huh.Option[ruleOption]
+	for i, rule := range cfg.Rules {
+		label := fmt.Sprintf("%d. %s", i+1, buildRuleLabel(&rule))
+		ruleOptions = append(ruleOptions, huh.NewOption(label, ruleOption{Label: label, Index: i}))
+	}
+
+	var selected ruleOption
+	selectForm := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[ruleOption]().
+				Title("Select a rule to edit").
+				Options(ruleOptions...).
+				Value(&selected),
+		),
+	)
+
+	if err := selectForm.Run(); err != nil {
+		return err
+	}
+
+	// Get the selected rule
+	rule := &cfg.Rules[selected.Index]
+
+	// Create edit form
+	var (
+		name       = rule.Name
+		extensions = joinStrings(rule.Extensions)
+		regex      = rule.Regex
+		mime       = rule.Mime
+		scheme     = rule.Scheme
+		command    = rule.Command
+		background = rule.Background
+		terminal   = rule.Terminal
+	)
+
+	editForm := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Name").
+				Description("Display name for this rule").
+				Value(&name),
+
+			huh.NewInput().
+				Title("Extensions").
+				Description("Comma-separated list of file extensions (e.g., pdf,doc)").
+				Value(&extensions),
+
+			huh.NewInput().
+				Title("Regex").
+				Description("Regular expression pattern to match filenames").
+				Value(&regex),
+
+			huh.NewInput().
+				Title("MIME Type").
+				Description("MIME type pattern (regex) to match").
+				Value(&mime),
+
+			huh.NewInput().
+				Title("Scheme").
+				Description("URL scheme to match (e.g., https, ftp)").
+				Value(&scheme),
+		),
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Command").
+				Description("Command to execute (use {{.File}}, {{.Dir}}, etc.)").
+				Value(&command).
+				Validate(func(s string) error {
+					if s == "" {
+						return fmt.Errorf("command is required")
+					}
+					return nil
+				}),
+
+			huh.NewConfirm().
+				Title("Background").
+				Description("Run command in background?").
+				Value(&background),
+
+			huh.NewConfirm().
+				Title("Terminal").
+				Description("Require terminal for execution?").
+				Value(&terminal),
+		),
+	)
+
+	if err := editForm.Run(); err != nil {
+		return err
+	}
+
+	// Validate regex and mime patterns if provided
+	if regex != "" {
+		if err := config.ValidateRegex(regex); err != nil {
+			return fmt.Errorf("invalid regex: %w", err)
+		}
+	}
+	if mime != "" {
+		if err := config.ValidateRegex(mime); err != nil {
+			return fmt.Errorf("invalid MIME pattern: %w", err)
+		}
+	}
+
+	// Update the rule
+	rule.Name = name
+	rule.Extensions = splitAndTrim(extensions)
+	rule.Regex = regex
+	rule.Mime = mime
+	rule.Scheme = scheme
+	rule.Command = command
+	rule.Background = background
+	rule.Terminal = terminal
+
+	// Save config
+	if err := config.SaveConfig(cfgFile, cfg); err != nil {
+		return err
+	}
+
+	fmt.Println("Rule updated successfully")
+	return nil
+}
+
+// buildRuleLabel creates a display label for a rule
+func buildRuleLabel(rule *config.Rule) string {
+	if rule.Name != "" {
+		return rule.Name
+	}
+	if len(rule.Extensions) > 0 {
+		return fmt.Sprintf("Extensions: %s", joinStrings(rule.Extensions))
+	}
+	if rule.Regex != "" {
+		return fmt.Sprintf("Regex: %s", rule.Regex)
+	}
+	return fmt.Sprintf("Command: %s", rule.Command)
+}
+
+// joinStrings joins a slice of strings with commas
+func joinStrings(strs []string) string {
+	if len(strs) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s", strs[0]) + func() string {
+		if len(strs) == 1 {
+			return ""
+		}
+		result := ""
+		for _, s := range strs[1:] {
+			result += "," + s
+		}
+		return result
+	}()
+}
+
+// splitAndTrim splits a comma-separated string and trims whitespace
+func splitAndTrim(s string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := []string{}
+	for _, part := range splitString(s, ",") {
+		trimmed := trimSpace(part)
+		if trimmed != "" {
+			parts = append(parts, trimmed)
+		}
+	}
+	return parts
+}
+
+func splitString(s, sep string) []string {
+	if s == "" {
+		return nil
+	}
+	var result []string
+	current := ""
+	for _, c := range s {
+		if string(c) == sep {
+			result = append(result, current)
+			current = ""
+		} else {
+			current += string(c)
+		}
+	}
+	if current != "" || len(result) > 0 {
+		result = append(result, current)
+	}
+	return result
+}
+
+func trimSpace(s string) string {
+	start := 0
+	end := len(s)
+	for start < end && (s[start] == ' ' || s[start] == '\t' || s[start] == '\n' || s[start] == '\r') {
+		start++
+	}
+	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\n' || s[end-1] == '\r') {
+		end--
+	}
+	return s[start:end]
 }

@@ -9,6 +9,9 @@ Entry (`et`) is a smart CLI file association tool written in Go. It allows you t
 - **Explain Mode**: Understand why a rule matched a specific file.
 - **Dry Run**: Preview commands without executing them.
 - **Config Management**: Easy-to-use CLI commands to manage your configuration.
+- **Verbose Logging**: Detailed logging with `--verbose` flag and log file output.
+- **Profile Support**: Multiple configuration profiles for different environments.
+- **Interactive Config Editor**: Edit rules with a user-friendly TUI.
 
 ## Installation
 
@@ -56,6 +59,43 @@ To see what command would be executed without actually running it:
 et --dry-run document.pdf
 ```
 
+### Verbose Mode
+
+Enable detailed logging to see what's happening:
+
+```bash
+# Using flag
+et --verbose document.pdf
+et -v document.pdf
+
+# Using environment variable
+export ENTRY_VERBOSE=true
+et document.pdf
+
+# View log file
+cat ~/.config/entry/logs/entry.log
+```
+
+### Profile Support
+
+Use different configurations for different contexts:
+
+```bash
+# Use a specific profile
+et --profile work document.pdf
+et -p work document.pdf
+
+# Set default profile
+export ENTRY_PROFILE=work
+et document.pdf
+
+# List available profiles
+et config profile-list
+
+# Copy profiles
+et config profile-copy default work
+```
+
 ## Configuration
 
 The configuration file is located at `~/.config/entry/config.yml`.
@@ -92,6 +132,12 @@ Check configuration validity:
 
 ```bash
 et config check
+```
+
+Edit existing rules interactively:
+
+```bash
+et config edit
 ```
 
 ### Configuration File Structure

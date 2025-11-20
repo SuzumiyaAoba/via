@@ -6,6 +6,7 @@ import (
 
 	"github.com/SuzumiyaAoba/entry/internal/config"
 	"github.com/SuzumiyaAoba/entry/internal/executor"
+	"github.com/SuzumiyaAoba/entry/internal/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -15,6 +16,8 @@ var (
 	dryRun      bool
 	interactive bool
 	explain     bool
+	verbose     bool
+	profile     string
 )
 
 func init() {
@@ -22,6 +25,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "print command instead of executing")
 	rootCmd.Flags().BoolVarP(&interactive, "select", "s", false, "Interactive selection")
 	rootCmd.Flags().BoolVar(&explain, "explain", false, "Show detailed matching information")
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
+	rootCmd.Flags().StringVarP(&profile, "profile", "p", "", "Configuration profile to use")
 	
 	// Allow flags after positional arguments to be passed to the command
 	rootCmd.Flags().SetInterspersed(false)
@@ -37,6 +42,30 @@ var rootCmd = &cobra.Command{
 	Version: Version,
 	Args:    cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Check for profile environment variable
+		if profile == "" && os.Getenv("ENTRY_PROFILE") != "" {
+			profile = os.Getenv("ENTRY_PROFILE")
+		}
+
+		// Resolve config file path with profile
+		if cfgFile == "" && profile != "" {
+			resolvedPath, err := config.GetConfigPathWithProfile("", profile)
+			if err != nil {
+				return fmt.Errorf("failed to resolve profile config path: %w", err)
+			}
+			cfgFile = resolvedPath
+			logger.Debug("Using profile '%s' with config: %s", profile, cfgFile)
+		}
+
+		// Initialize logger
+		if err := initLogger(); err != nil {
+			return fmt.Errorf("failed to initialize logger: %w", err)
+		}
+		defer logger.GetGlobal().Close()
+
+		logger.Debug("Starting entry with args: %v", args)
+		logger.Debug("Flags - verbose: %v, dryRun: %v, interactive: %v, explain: %v, profile: %s", verbose, dryRun, interactive, explain, profile)
+
 		// Args are already parsed by Cobra
 		// args[0] is the file/command
 		// args[1:] are arguments to the command (if matched) or part of the command
