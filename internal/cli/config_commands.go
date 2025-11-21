@@ -8,7 +8,7 @@ var configInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize default configuration",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runConfigInit()
+		return runConfigInit(cmd)
 	},
 }
 
@@ -16,16 +16,16 @@ var configCheckCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Check configuration validity",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runConfigCheck()
+		return runConfigCheck(cmd)
 	},
 }
 
 var configRemoveCmd = &cobra.Command{
 	Use:   "remove <index>",
-	Short: "Remove a rule by index (1-based)",
+	Short: "Remove a rule by index",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runConfigRemove(args[0])
+		return runConfigRemove(cmd, args[0])
 	},
 }
 
@@ -34,14 +34,14 @@ var configSetDefaultCmd = &cobra.Command{
 	Short: "Set default command",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runConfigSetDefault(args[0])
+		return runConfigSetDefault(cmd, args[0])
 	},
 }
 
 var configEditCmd = &cobra.Command{
 	Use:   "edit",
-	Short: "Edit an existing rule interactively",
+	Short: "Edit configuration interactively",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runConfigEdit()
+		return runConfigEdit(cmd)
 	},
 }

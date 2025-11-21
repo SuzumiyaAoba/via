@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/SuzumiyaAoba/entry/internal/config"
 	"github.com/SuzumiyaAoba/entry/internal/executor"
@@ -24,7 +25,7 @@ var configListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List current configuration",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runConfigList()
+		return runConfigList(cmd)
 	},
 }
 
@@ -32,7 +33,7 @@ var configOpenCmd = &cobra.Command{
 	Use:   "open",
 	Short: "Open configuration file in editor",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runConfigOpen()
+		return runConfigOpen(cmd)
 	},
 }
 
@@ -70,7 +71,7 @@ func init() {
 	configCmd.AddCommand(configProfileCopyCmd)
 }
 
-func runConfigList() error {
+func runConfigList(cmd *cobra.Command) error {
 	cfg, err := config.LoadConfig(cfgFile)
 	if err != nil {
 		return err
@@ -81,11 +82,11 @@ func runConfigList() error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	fmt.Println(string(data))
+	fmt.Fprintln(cmd.OutOrStdout(), string(data))
 	return nil
 }
 
-func runConfigOpen() error {
+func runConfigOpen(cmd *cobra.Command) error {
 	configPath, err := config.GetConfigPath(cfgFile)
 	if err != nil {
 		return err
@@ -96,7 +97,7 @@ func runConfigOpen() error {
 		if err := config.SaveConfig(cfgFile, cfg); err != nil {
 			return fmt.Errorf("failed to create default config: %w", err)
 		}
-		fmt.Printf("Created default config at %s\n", configPath)
+		fmt.Fprintf(cmd.OutOrStdout(), "Created default config at %s\n", configPath)
 	}
 
 	exec := executor.NewExecutor(os.Stdout, false)
@@ -159,11 +160,11 @@ func runConfigAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println("Rule added successfully")
+	fmt.Fprintln(cmd.OutOrStdout(), "Rule added successfully")
 	return nil
 }
 
-func runConfigInit() error {
+func runConfigInit(cmd *cobra.Command) error {
 	configPath, err := config.GetConfigPath(cfgFile)
 	if err != nil {
 		return err
@@ -190,11 +191,11 @@ func runConfigInit() error {
 		return fmt.Errorf("failed to create default config: %w", err)
 	}
 
-	fmt.Printf("Created default config at %s\n", configPath)
+	fmt.Fprintf(cmd.OutOrStdout(), "Created default config at %s\n", configPath)
 	return nil
 }
 
-func runConfigCheck() error {
+func runConfigCheck(cmd *cobra.Command) error {
 	cfg, err := config.LoadConfig(cfgFile)
 	if err != nil {
 		return err
@@ -204,11 +205,11 @@ func runConfigCheck() error {
 		return err
 	}
 
-	fmt.Println("Configuration is valid")
+	fmt.Fprintln(cmd.OutOrStdout(), "Configuration is valid")
 	return nil
 }
 
-func runConfigRemove(indexStr string) error {
+func runConfigRemove(cmd *cobra.Command, indexStr string) error {
 	var index int
 	if _, err := fmt.Sscanf(indexStr, "%d", &index); err != nil {
 		return fmt.Errorf("invalid index: %s", indexStr)
@@ -230,11 +231,11 @@ func runConfigRemove(indexStr string) error {
 		return err
 	}
 
-	fmt.Println("Rule removed successfully")
+	fmt.Fprintln(cmd.OutOrStdout(), "Rule removed successfully")
 	return nil
 }
 
-func runConfigSetDefault(command string) error {
+func runConfigSetDefault(cmd *cobra.Command, command string) error {
 	// Check if config exists first
 	configPath, err := config.GetConfigPath(cfgFile)
 	if err != nil {
@@ -259,11 +260,11 @@ func runConfigSetDefault(command string) error {
 		return err
 	}
 
-	fmt.Println("Default command updated successfully")
+	fmt.Fprintln(cmd.OutOrStdout(), "Default command updated successfully")
 	return nil
 }
 
-func runConfigEdit() error {
+func runConfigEdit(cmd *cobra.Command) error {
 	cfg, err := config.LoadConfig(cfgFile)
 	if err != nil {
 		return err
@@ -305,7 +306,7 @@ func runConfigEdit() error {
 	// Create edit form
 	var (
 		name       = rule.Name
-		extensions = joinStrings(rule.Extensions)
+		extensions = strings.Join(rule.Extensions, ",")
 		regex      = rule.Regex
 		mime       = rule.Mime
 		scheme     = rule.Scheme
@@ -396,7 +397,7 @@ func runConfigEdit() error {
 		return err
 	}
 
-	fmt.Println("Rule updated successfully")
+	fmt.Fprintln(cmd.OutOrStdout(), "Rule updated successfully")
 	return nil
 }
 
@@ -406,29 +407,12 @@ func buildRuleLabel(rule *config.Rule) string {
 		return rule.Name
 	}
 	if len(rule.Extensions) > 0 {
-		return fmt.Sprintf("Extensions: %s", joinStrings(rule.Extensions))
+		return fmt.Sprintf("Extensions: %s", strings.Join(rule.Extensions, ","))
 	}
 	if rule.Regex != "" {
 		return fmt.Sprintf("Regex: %s", rule.Regex)
 	}
 	return fmt.Sprintf("Command: %s", rule.Command)
-}
-
-// joinStrings joins a slice of strings with commas
-func joinStrings(strs []string) string {
-	if len(strs) == 0 {
-		return ""
-	}
-	return fmt.Sprintf("%s", strs[0]) + func() string {
-		if len(strs) == 1 {
-			return ""
-		}
-		result := ""
-		for _, s := range strs[1:] {
-			result += "," + s
-		}
-		return result
-	}()
 }
 
 // splitAndTrim splits a comma-separated string and trims whitespace
@@ -437,43 +421,11 @@ func splitAndTrim(s string) []string {
 		return nil
 	}
 	parts := []string{}
-	for _, part := range splitString(s, ",") {
-		trimmed := trimSpace(part)
+	for _, part := range strings.Split(s, ",") {
+		trimmed := strings.TrimSpace(part)
 		if trimmed != "" {
 			parts = append(parts, trimmed)
 		}
 	}
 	return parts
-}
-
-func splitString(s, sep string) []string {
-	if s == "" {
-		return nil
-	}
-	var result []string
-	current := ""
-	for _, c := range s {
-		if string(c) == sep {
-			result = append(result, current)
-			current = ""
-		} else {
-			current += string(c)
-		}
-	}
-	if current != "" || len(result) > 0 {
-		result = append(result, current)
-	}
-	return result
-}
-
-func trimSpace(s string) string {
-	start := 0
-	end := len(s)
-	for start < end && (s[start] == ' ' || s[start] == '\t' || s[start] == '\n' || s[start] == '\r') {
-		start++
-	}
-	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\n' || s[end-1] == '\r') {
-		end--
-	}
-	return s[start:end]
 }

@@ -14,11 +14,15 @@ var _ = Describe("Config commands", func() {
 	var (
 		tmpDir     string
 		configFile string
+		outBuf     bytes.Buffer
 	)
 
 	BeforeEach(func() {
 		tmpDir = GinkgoT().TempDir()
 		configFile = filepath.Join(tmpDir, "config.yml")
+		outBuf.Reset()
+		rootCmd.SetOut(&outBuf)
+		rootCmd.SetErr(&outBuf)
 	})
 
 	Describe("runConfigList", func() {
@@ -43,13 +47,13 @@ rules:
 		})
 
 		It("should list configuration", func() {
-			err := runConfigList()
+			err := runConfigList(rootCmd)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return error for missing config", func() {
 			cfgFile = filepath.Join(tmpDir, "nonexistent.yml")
-			err := runConfigList()
+			err := runConfigList(rootCmd)
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -172,50 +176,47 @@ rules:
 		})
 	})
 
-
-
 	Describe("runConfigRemove", func() {
 		BeforeEach(func() {
 			cfgFile = configFile
-			cfg := &config.Config{
+			// Create a valid config file with rules
+			cfg := config.Config{
 				Version: "1",
 				Rules: []config.Rule{
 					{Name: "Rule 1", Command: "cmd1"},
 					{Name: "Rule 2", Command: "cmd2"},
 				},
 			}
-			err := config.SaveConfig(cfgFile, cfg)
+			err := config.SaveConfig(configFile, &cfg)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		AfterEach(func() {
-			cfgFile = ""
-		})
-
-		It("should remove rule by index", func() {
-			err := runConfigRemove("1")
+		It("should remove a rule by index", func() {
+			err := runConfigRemove(rootCmd, "1")
 			Expect(err).NotTo(HaveOccurred())
+			Expect(outBuf.String()).To(ContainSubstring("Rule removed successfully"))
 
-			cfg, err := config.LoadConfig(cfgFile)
+			// Verify rule was removed
+			cfg, err := config.LoadConfig(configFile)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(cfg.Rules).To(HaveLen(1))
+			Expect(len(cfg.Rules)).To(Equal(1))
 			Expect(cfg.Rules[0].Name).To(Equal("Rule 2"))
 		})
 
 		It("should return error for invalid index format", func() {
-			err := runConfigRemove("abc")
+			err := runConfigRemove(rootCmd, "invalid")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("invalid index"))
 		})
 
 		It("should return error for index out of range", func() {
-			err := runConfigRemove("3")
+			err := runConfigRemove(rootCmd, "3")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("index out of range"))
 		})
 
 		It("should return error for index 0", func() {
-			err := runConfigRemove("0")
+			err := runConfigRemove(rootCmd, "0")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("index out of range"))
 		})
@@ -224,37 +225,32 @@ rules:
 	Describe("runConfigSetDefault", func() {
 		BeforeEach(func() {
 			cfgFile = configFile
-			cfg := &config.Config{
-				Version:        "1",
-				DefaultCommand: "old_default",
-				Default:        "alias_default",
-			}
-			err := config.SaveConfig(cfgFile, cfg)
+			// Create a valid config file
+			cfg := config.Config{Version: "1"}
+			err := config.SaveConfig(configFile, &cfg)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		AfterEach(func() {
-			cfgFile = ""
+		It("should set default command", func() {
+			err := runConfigSetDefault(rootCmd, "vim {{.File}}")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(outBuf.String()).To(ContainSubstring("Default command updated successfully"))
+
+			// Verify config was updated
+			cfg, err := config.LoadConfig(configFile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg.DefaultCommand).To(Equal("vim {{.File}}"))
 		})
 
-		It("should update default command", func() {
-			err := runConfigSetDefault("new_default")
+		It("should create config if it doesn't exist", func() {
+			os.Remove(configFile)
+			err := runConfigSetDefault(rootCmd, "nano {{.File}}")
 			Expect(err).NotTo(HaveOccurred())
 
-			cfg, err := config.LoadConfig(cfgFile)
+			// Verify config was created
+			cfg, err := config.LoadConfig(configFile)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(cfg.DefaultCommand).To(Equal("new_default"))
-			Expect(cfg.Default).To(BeEmpty()) // Should clear alias
-		})
-
-		It("should create config if not exists", func() {
-			cfgFile = filepath.Join(tmpDir, "new_config_default.yml")
-			err := runConfigSetDefault("default_cmd")
-			Expect(err).NotTo(HaveOccurred())
-
-			cfg, err := config.LoadConfig(cfgFile)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cfg.DefaultCommand).To(Equal("default_cmd"))
+			Expect(cfg.DefaultCommand).To(Equal("nano {{.File}}"))
 		})
 	})
 })

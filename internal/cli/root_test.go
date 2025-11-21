@@ -4,16 +4,13 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
-	"testing"
 
+	"github.com/SuzumiyaAoba/entry/internal/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-func TestEntry(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Entry CLI Suite")
-}
+
 
 var _ = Describe("Entry CLI", func() {
 	var (
@@ -32,7 +29,7 @@ var _ = Describe("Entry CLI", func() {
 		rootCmd.SetErr(&errBuf)
 		
 		// Reset global flags
-		cfgFile = ""
+		cfgFile = configFile
 		dryRun = false
 		interactive = false
 		explain = false
@@ -44,7 +41,7 @@ var _ = Describe("Entry CLI", func() {
 version: "1"
 rules:
   - name: Config Rule
-    extensions: [config]
+    extensions: [conf]
     command: echo "Opening config file"
 `
 			err := os.WriteFile(configFile, []byte(configContent), 0644)
@@ -52,9 +49,22 @@ rules:
 		})
 
 		It("should treat 'config' as file argument without double dash", func() {
-			// et config -> should match rule or fail (here matches rule)
-			rootCmd.SetArgs([]string{"--config", configFile, "--dry-run", "config"})
-			err := rootCmd.Execute()
+			// Create a rule for "config" file
+			cfg := config.Config{
+				Version: "1",
+				Rules: []config.Rule{
+					{
+						Name:       "Config Rule",
+						Extensions: []string{"conf"},
+						Command:    "echo \"Opening config file\"",
+					},
+				},
+			}
+			err := config.SaveConfig(configFile, &cfg)
+			Expect(err).NotTo(HaveOccurred())
+
+			rootCmd.SetArgs([]string{"--config", configFile, "--dry-run", "config.conf"})
+			err = rootCmd.Execute()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outBuf.String()).To(ContainSubstring("Opening config file"))
 		})

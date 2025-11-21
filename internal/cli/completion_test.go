@@ -3,17 +3,13 @@ package cli
 import (
 	"os"
 	"path/filepath"
-	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/cobra"
 )
 
-func TestCompletion(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Completion Suite")
-}
+
 
 var _ = Describe("Completion", func() {
 	var (
