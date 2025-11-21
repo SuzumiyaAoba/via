@@ -25,6 +25,7 @@ var configProfileCopyCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runConfigProfileCopy(args[0], args[1])
 	},
+	ValidArgsFunction: CompletionProfiles,
 }
 
 func runConfigProfileList() error {

@@ -27,6 +27,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&explain, "explain", false, "Show detailed matching information")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
 	rootCmd.Flags().StringVarP(&profile, "profile", "p", "", "Configuration profile to use")
+	rootCmd.RegisterFlagCompletionFunc("profile", CompletionProfiles)
 	
 	// Allow flags after positional arguments to be passed to the command
 	rootCmd.Flags().SetInterspersed(false)
@@ -117,3 +118,5 @@ func Execute() {
 		os.Exit(1)
 	}
 }
+
+

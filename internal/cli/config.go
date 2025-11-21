@@ -51,6 +51,14 @@ func init() {
 
 	configAddCmd.Flags().String("ext", "", "Extension to match (comma separated)")
 	configAddCmd.Flags().String("cmd", "", "Command to execute")
+	configAddCmd.Flags().String("name", "", "Rule name")
+	configAddCmd.Flags().String("regex", "", "Regex pattern to match")
+	configAddCmd.Flags().String("mime", "", "MIME type pattern to match")
+	configAddCmd.Flags().String("scheme", "", "URL scheme to match")
+	configAddCmd.Flags().Bool("terminal", false, "Run in terminal")
+	configAddCmd.Flags().Bool("background", false, "Run in background")
+	configAddCmd.Flags().Bool("fallthrough", false, "Continue matching other rules")
+	configAddCmd.Flags().StringSlice("os", nil, "OS constraints (e.g. darwin, linux)")
 	configAddCmd.MarkFlagRequired("cmd")
 
 	configCmd.AddCommand(configInitCmd)
@@ -99,8 +107,29 @@ func runConfigAdd(cmd *cobra.Command, args []string) error {
 	ext, _ := cmd.Flags().GetString("ext")
 	command, _ := cmd.Flags().GetString("cmd")
 
+	name, _ := cmd.Flags().GetString("name")
+	regex, _ := cmd.Flags().GetString("regex")
+	mime, _ := cmd.Flags().GetString("mime")
+	scheme, _ := cmd.Flags().GetString("scheme")
+	terminal, _ := cmd.Flags().GetBool("terminal")
+	background, _ := cmd.Flags().GetBool("background")
+	isFallthrough, _ := cmd.Flags().GetBool("fallthrough")
+	osList, _ := cmd.Flags().GetStringSlice("os")
+
 	if command == "" {
 		return fmt.Errorf("--cmd is required")
+	}
+
+	// Validate regex and mime
+	if regex != "" {
+		if err := config.ValidateRegex(regex); err != nil {
+			return fmt.Errorf("invalid regex: %w", err)
+		}
+	}
+	if mime != "" {
+		if err := config.ValidateRegex(mime); err != nil {
+			return fmt.Errorf("invalid MIME pattern: %w", err)
+		}
 	}
 
 	cfg, err := config.LoadConfig(cfgFile)
@@ -109,11 +138,19 @@ func runConfigAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	rule := config.Rule{
-		Command: command,
+		Name:        name,
+		Command:     command,
+		Regex:       regex,
+		Mime:        mime,
+		Scheme:      scheme,
+		Terminal:    terminal,
+		Background:  background,
+		Fallthrough: isFallthrough,
+		OS:          osList,
 	}
 
 	if ext != "" {
-		rule.Extensions = []string{ext}
+		rule.Extensions = splitAndTrim(ext)
 	}
 
 	cfg.Rules = append(cfg.Rules, rule)

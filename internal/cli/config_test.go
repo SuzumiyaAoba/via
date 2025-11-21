@@ -139,6 +139,37 @@ rules:
 
 			Expect(fileExists(cfgFile)).To(BeTrue())
 		})
+
+		It("should add rule with all flags", func() {
+			// Reset flags
+			configAddCmd.Flags().Set("ext", "")
+			configAddCmd.Flags().Set("cmd", "echo test")
+			configAddCmd.Flags().Set("name", "Test Rule")
+			configAddCmd.Flags().Set("regex", ".*\\.test$")
+			configAddCmd.Flags().Set("mime", "text/plain")
+			configAddCmd.Flags().Set("scheme", "https")
+			configAddCmd.Flags().Set("terminal", "true")
+			configAddCmd.Flags().Set("background", "true")
+			configAddCmd.Flags().Set("fallthrough", "true")
+			configAddCmd.Flags().Set("os", "darwin,linux")
+
+			err := runConfigAdd(configAddCmd, []string{})
+			Expect(err).NotTo(HaveOccurred())
+
+			cfg, err := config.LoadConfig(cfgFile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg.Rules).To(HaveLen(1))
+			rule := cfg.Rules[0]
+			Expect(rule.Name).To(Equal("Test Rule"))
+			Expect(rule.Command).To(Equal("echo test"))
+			Expect(rule.Regex).To(Equal(".*\\.test$"))
+			Expect(rule.Mime).To(Equal("text/plain"))
+			Expect(rule.Scheme).To(Equal("https"))
+			Expect(rule.Terminal).To(BeTrue())
+			Expect(rule.Background).To(BeTrue())
+			Expect(rule.Fallthrough).To(BeTrue())
+			Expect(rule.OS).To(ConsistOf("darwin", "linux"))
+		})
 	})
 
 

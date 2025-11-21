@@ -113,7 +113,8 @@ et config init
 Add a new rule:
 
 ```bash
-et config add --ext "pdf" --cmd "open {{.File}}"
+et config add --cmd "open {{.File}}" --ext "pdf" --name "PDF Reader" --background
+et config add --cmd "cat {{.File}}" --regex ".*\.log$" --terminal
 ```
 
 List current configuration:

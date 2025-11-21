@@ -5,6 +5,9 @@ import (
 	"net/url"
 	"os"
 
+	"path/filepath"
+	"strings"
+
 	"github.com/SuzumiyaAoba/entry/internal/config"
 	"github.com/SuzumiyaAoba/entry/internal/executor"
 	"github.com/SuzumiyaAoba/entry/internal/logger"
@@ -12,6 +15,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
+	"github.com/spf13/cobra"
 )
 
 // File and URL detection helpers
@@ -175,4 +179,33 @@ func createStyledTable(headers []string, rows [][]string) string {
 	}
 
 	return t.Render()
+}
+
+// CompletionProfiles provides shell completion for profile names
+func CompletionProfiles(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	profilesDir := filepath.Join(home, ".config", "entry", "profiles")
+	entries, err := os.ReadDir(profilesDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	var profiles []string
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".yml") {
+			profileName := strings.TrimSuffix(entry.Name(), ".yml")
+			if strings.HasPrefix(profileName, toComplete) {
+				profiles = append(profiles, profileName)
+			}
+		}
+	}
+
+	return profiles, cobra.ShellCompDirectiveNoFileComp
 }
