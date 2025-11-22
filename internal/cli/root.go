@@ -106,6 +106,29 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	}
 
+	// Check for subcommands first (Precedence: Subcommand > File)
+	// This ensures 'et config' runs the config command, not opens a file named 'config'
+	// To open a file named 'config', use 'et ./config' or 'et -- config'
+	if len(args) > 0 {
+		subCmd, subArgs, err := cmd.Find(args)
+		if err == nil && subCmd != cmd {
+			// Found a subcommand!
+			// Detach subcommand from parent to prevent infinite recursion
+			parent := subCmd.Parent()
+			if parent != nil {
+				parent.RemoveCommand(subCmd)
+				defer parent.AddCommand(subCmd)
+			}
+
+			// Inherit output from root command
+			subCmd.SetOut(cmd.OutOrStdout())
+			subCmd.SetErr(cmd.ErrOrStderr())
+
+			subCmd.SetArgs(subArgs)
+			return subCmd.Execute()
+		}
+	}
+
 	// Check for profile environment variable
 	if profile == "" && os.Getenv("ENTRY_PROFILE") != "" {
 		profile = os.Getenv("ENTRY_PROFILE")

@@ -1,17 +1,26 @@
 # Entry (et)
 
-Entry (`et`) is a smart CLI file association tool written in Go. It allows you to execute specific commands based on file extensions, regex patterns, MIME types, or URL schemes. It provides intelligent file handling with interactive selection, dry-run mode, and detailed matching explanations.
+Entry (`et`) is a smart CLI file association tool written in Go. It acts as a unified entry point for your workflow, allowing you to execute specific commands based on file extensions, regex patterns, MIME types, or URL schemes.
+
+Instead of remembering different commands for every file type (`cat`, `open`, `vim`, `mpv`, etc.), just use `et`.
 
 ## Features
 
-- **Smart Matching**: Match files by extension, regex, MIME type, or URL scheme.
-- **Interactive Mode**: Select from multiple matching rules using a TUI.
-- **Explain Mode**: Understand why a rule matched a specific file.
-- **Dry Run**: Preview commands without executing them.
-- **Config Management**: Easy-to-use CLI commands to manage your configuration.
-- **Verbose Logging**: Detailed logging with `--verbose` flag and log file output.
-- **Profile Support**: Multiple configuration profiles for different environments.
-- **Interactive Config Editor**: Edit rules with a user-friendly TUI.
+### 🧠 Smart Execution
+-   **Extension Matching**: Map `.pdf` to your PDF reader, `.md` to your editor.
+-   **Regex Matching**: Match filenames like `.*_test.go` to run tests.
+-   **MIME Type Matching**: Handle files based on content type (e.g., `image/.*`).
+-   **URL Scheme Matching**: Open `https://` or `ftp://` links with specific browsers or tools.
+
+### ⚡ Power User Tools
+-   **Interactive Mode**: Ambiguous match? Select the right rule from a beautiful TUI.
+-   **Dry Run**: Preview exactly what command will run without executing it.
+-   **Explain Mode**: Debug your configuration by seeing exactly why a rule matched (or didn't).
+
+### 🛠️ Configuration
+-   **Profiles**: Switch contexts easily (e.g., `work` vs `personal` configs).
+-   **Interactive Editor**: Manage your rules without leaving the terminal.
+-   **YAML Config**: Simple, human-readable configuration file.
 
 ## Installation
 
@@ -33,134 +42,161 @@ et document.pdf
 et https://example.com
 ```
 
-### Interactive Mode
+### Matching Precedence
 
-If multiple rules match a file, you can use interactive mode to choose which one to execute:
+Entry evaluates rules in the following order:
+1.  **Extension**: Exact match on file extension.
+2.  **Regex**: Pattern match on the filename.
+3.  **MIME Type**: Match on the file's detected MIME type.
+4.  **URL Scheme**: Match on the URL protocol.
+
+### Interactive Mode (`-s`, `--select`)
+
+If you have multiple rules that could apply to a file (e.g., "Edit Markdown" and "View Markdown"), use interactive mode:
 
 ```bash
 et -s document.md
-# or
-et --select document.md
 ```
 
-### Explain Mode
+### Explain Mode (`--explain`)
 
-To see which rules match a file and why:
+Not sure why a file is opening with the wrong command?
 
 ```bash
 et --explain document.pdf
 ```
 
-### Dry Run
+### Dry Run (`--dry-run`)
 
-To see what command would be executed without actually running it:
+See the generated command without running it:
 
 ```bash
 et --dry-run document.pdf
-```
-
-### Verbose Mode
-
-Enable detailed logging to see what's happening:
-
-```bash
-# Using flag
-et --verbose document.pdf
-et -v document.pdf
-
-# Using environment variable
-export ENTRY_VERBOSE=true
-et document.pdf
-
-# View log file
-cat ~/.config/entry/logs/entry.log
-```
-
-### Profile Support
-
-Use different configurations for different contexts:
-
-```bash
-# Use a specific profile
-et --profile work document.pdf
-et -p work document.pdf
-
-# Set default profile
-export ENTRY_PROFILE=work
-et document.pdf
-
-# List available profiles
-et config profile-list
-
-# Copy profiles
-et config profile-copy default work
+# Output: open -a Preview document.pdf
 ```
 
 ## Configuration
 
 The configuration file is located at `~/.config/entry/config.yml`.
 
-### Initialize Configuration
+### Quick Start
 
-To create a default configuration file:
+Initialize a default configuration:
 
 ```bash
 et config init
 ```
 
-### Manage Rules
+### Managing Rules
 
-Add a new rule:
-
-```bash
-et config add --cmd "open {{.File}}" --ext "pdf" --name "PDF Reader" --background
-et config add --cmd "cat {{.File}}" --regex ".*\.log$" --terminal
-```
-
-List current configuration:
+You can manage rules entirely from the CLI:
 
 ```bash
-et config list
-```
+# Add a rule for PDF files
+et config add --name "PDF Reader" --ext "pdf" --cmd "open {{.File}}" --background
 
-Open configuration file in your default editor:
+# Add a rule for log files using regex
+et config add --name "Log Viewer" --regex ".*\.log$" --cmd "tail -f {{.File}}" --terminal
 
-```bash
-et config open
-```
+# Add a rule with MIME type matching
+et config add --name "Images" --mime "image/.*" --cmd "feh {{.File}}"
 
-Check configuration validity:
+# Remove a rule by index (see 'et config list' for indices)
+et config remove 1
 
-```bash
-et config check
-```
+# Set the default command (fallback)
+et config set-default "vim {{.File}}"
 
-Edit existing rules interactively:
-
-```bash
+# Edit rules interactively
 et config edit
 ```
+
+### Config Add Flags
+
+| Flag | Description |
+| :--- | :--- |
+| `--cmd` | **Required**. Command to execute. |
+| `--name` | Rule name. |
+| `--ext` | Comma-separated list of extensions. |
+| `--regex` | Regex pattern to match filename. |
+| `--mime` | Regex pattern to match MIME type. |
+| `--scheme` | URL scheme to match. |
+| `--terminal` | Run in terminal. |
+| `--background` | Run in background. |
+| `--fallthrough` | Continue matching other rules. |
+| `--os` | Comma-separated list of OS constraints. |
+
+### Rule Reference
+
+A rule in `config.yml` can have the following fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `name` | string | Human-readable name for the rule. |
+| `extensions` | list | List of file extensions (e.g., `["pdf", "epub"]`). |
+| `regex` | string | Regular expression to match filename. |
+| `mime` | string | Regex to match MIME type (e.g., `image/.*`). |
+| `scheme` | string | URL scheme (e.g., `https`). |
+| `command` | string | **Required**. Command to execute. Supports templates like `{{.File}}`. |
+| `terminal` | bool | If `true`, runs the command in the current terminal (foreground). |
+| `background` | bool | If `true`, runs the command in the background (detached). |
+| `fallthrough` | bool | If `true`, continues matching subsequent rules even if this one matches. |
+| `os` | list | List of OSs this rule applies to (e.g., `["darwin", "linux"]`). |
 
 ### Configuration File Structure
 
 ```yaml
 version: "1"
-default_command: "vim {{.File}}"
+default_command: "vim {{.File}}" # Fallback if no rules match
 aliases:
-  v: "vim"
+  v: "vim" # 'et v file.txt' -> 'vim file.txt'
 rules:
   - name: "Open PDFs"
     extensions: ["pdf"]
     command: "open {{.File}}"
     background: true
     os: ["darwin"]
-  - extensions: ["md", "txt"]
-    regex: ".*\\.md$"
-    mime: "text/.*"
-    scheme: "https"
-    terminal: true
-    fallthrough: true
+  - name: "Markdown"
+    extensions: ["md", "txt"]
     command: "cat {{.File}}"
+    terminal: true
+```
+
+## Profiles
+
+Profiles allow you to have different configurations for different environments.
+
+```bash
+# Create a new profile named 'work' based on default
+et config profile-copy default work
+
+# List available profiles
+et config profile-list
+
+# Use the 'work' profile for a single command
+et --profile work document.pdf
+
+# Set 'work' as the default profile for this session
+export ENTRY_PROFILE=work
+et document.pdf
+```
+
+## Troubleshooting
+
+### "Command not found"
+Ensure the command specified in your rule exists in your system `$PATH`.
+
+### "No matching rule found"
+1.  Run with `--explain` to see what Entry checked.
+2.  Check if your file has an extension.
+3.  Verify your regex patterns.
+
+### Verbose Logging
+Enable verbose logging to see detailed execution steps:
+
+```bash
+et -v document.pdf
+# Logs are written to ~/.config/entry/logs/entry.log
 ```
 
 ## Development
