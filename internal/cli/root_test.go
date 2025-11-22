@@ -70,8 +70,8 @@ rules:
 		})
 
 		It("should execute config subcommand with double dash", func() {
-			// et -- config list -> should execute config list command
-			rootCmd.SetArgs([]string{"--config", configFile, "--", "config", "list"})
+			// et -- :config list -> should execute config list command
+			rootCmd.SetArgs([]string{"--config", configFile, "--", ":config", "list"})
 			err := rootCmd.Execute()
 			Expect(err).NotTo(HaveOccurred())
 			// config list output is YAML
@@ -79,9 +79,9 @@ rules:
 		})
 
 		It("should handle flags before double dash", func() {
-			// et --dry-run -- config list
+			// et --dry-run -- :config list
 			// Note: config list doesn't use dry-run, but we check if parsing works
-			rootCmd.SetArgs([]string{"--config", configFile, "--dry-run", "--", "config", "list"})
+			rootCmd.SetArgs([]string{"--config", configFile, "--dry-run", "--", ":config", "list"})
 			err := rootCmd.Execute()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outBuf.String()).To(ContainSubstring("version: \"1\""))

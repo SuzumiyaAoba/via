@@ -9,19 +9,19 @@ import (
 )
 
 var completionCmd = &cobra.Command{
-	Use:   "completion [bash|zsh|fish|powershell]",
+	Use:   ":completion [bash|zsh|fish|powershell]",
 	Short: "Generate completion script",
 	Long: `To load completions:
 
 Bash:
 
-  $ source <(et completion bash)
+  $ source <(et :completion bash)
 
   # To load completions for each session, execute once:
   # Linux:
-  $ et completion bash > /etc/bash_completion.d/et
+  $ et :completion bash > /etc/bash_completion.d/et
   # macOS:
-  $ et completion bash > /usr/local/etc/bash_completion.d/et
+  $ et :completion bash > /usr/local/etc/bash_completion.d/et
 
 Zsh:
 
@@ -31,23 +31,23 @@ Zsh:
   $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
   # To load completions for each session, execute once:
-  $ et completion zsh > "${fpath[1]}/_et"
+  $ et :completion zsh > "${fpath[1]}/_et"
 
   # You will need to start a new shell for this setup to take effect.
 
 Fish:
 
-  $ et completion fish | source
+  $ et :completion fish | source
 
   # To load completions for each session, execute once:
-  $ et completion fish > ~/.config/fish/completions/et.fish
+  $ et :completion fish > ~/.config/fish/completions/et.fish
 
 PowerShell:
 
-  PS> et completion powershell | Out-String | Invoke-Expression
+  PS> et :completion powershell | Out-String | Invoke-Expression
 
   # To load completions for each session, execute once:
-  PS> et completion powershell > et.ps1
+  PS> et :completion powershell > et.ps1
   # and source this file from your PowerShell profile.
 `,
 	DisableFlagsInUseLine: true,

@@ -16,7 +16,7 @@ var _ = Describe("Version command", func() {
 	})
 
 	It("should print version", func() {
-		rootCmd.SetArgs([]string{"version"})
+		rootCmd.SetArgs([]string{":version"})
 		err := rootCmd.Execute()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(outBuf.String()).To(ContainSubstring("et dev"))

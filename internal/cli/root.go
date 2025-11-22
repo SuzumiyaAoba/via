@@ -32,11 +32,28 @@ func init() {
 	// Allow flags after positional arguments to be passed to the command
 	rootCmd.Flags().SetInterspersed(false)
 
-	// Subcommands are added in runRoot to allow manual dispatch and prevent
-	// Cobra from hijacking execution when arguments match subcommand names
-	// but are intended as file arguments (e.g. "et config").
-	// rootCmd.AddCommand(configCmd)
-	// rootCmd.AddCommand(completionCmd)
+	// Define custom help command with colon prefix
+	helpCmd := &cobra.Command{
+		Use:   ":help [command]",
+		Short: "Help about any command",
+		Long: `Help provides help for any command in the application.
+Simply type et :help [path to command] for full details.`,
+		Run: func(c *cobra.Command, args []string) {
+			cmd, _, e := c.Root().Find(args)
+			if cmd == nil || e != nil {
+				c.Printf("Unknown help topic %#q\n", args)
+				c.Root().Usage()
+			} else {
+				cmd.InitDefaultHelpFlag() // make sure help flag is init
+				cmd.Help()
+			}
+		},
+	}
+	rootCmd.SetHelpCommand(helpCmd)
+
+	// Register subcommands
+	rootCmd.AddCommand(configCmd)
+	rootCmd.AddCommand(completionCmd)
 }
 
 var rootCmd = &cobra.Command{
@@ -44,18 +61,15 @@ var rootCmd = &cobra.Command{
 	Short:   "Entry is a CLI file association tool",
 	Long:    `Entry allows you to execute specific commands based on file extensions or regex patterns matched against a provided file argument.`,
 	Version: Version,
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
 	DisableFlagParsing: true,
 	Args: cobra.ArbitraryArgs,
 	RunE: runRoot,
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
-	// Temporarily add subcommands to allow Find to work and Help to show them
-	cmd.AddCommand(configCmd)
-	cmd.AddCommand(completionCmd)
-	defer cmd.RemoveCommand(configCmd)
-	defer cmd.RemoveCommand(completionCmd)
-
 	// Manually parse flags
 	// Note: We must use cmd.Flags().Parse() directly because cmd.ParseFlags()
 	// returns early if DisableFlagParsing is true.
@@ -106,9 +120,9 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	}
 
-	// Check for subcommands first (Precedence: Subcommand > File)
-	// This ensures 'et config' runs the config command, not opens a file named 'config'
-	// To open a file named 'config', use 'et ./config' or 'et -- config'
+	// Check for system commands (prefixed with :)
+	// This ensures 'et :config' runs the config command
+	// 'et config' will fall through to file/alias execution
 	if len(args) > 0 {
 		subCmd, subArgs, err := cmd.Find(args)
 		if err == nil && subCmd != cmd {

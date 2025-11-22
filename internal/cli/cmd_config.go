@@ -13,7 +13,7 @@ import (
 )
 
 var configCmd = &cobra.Command{
-	Use:   "config",
+	Use:   ":config",
 	Short: "Manage configuration",
 	Long:  `Manage the entry configuration file.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
