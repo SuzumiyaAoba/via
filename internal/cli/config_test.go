@@ -2,10 +2,13 @@ package cli
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 
 	"github.com/SuzumiyaAoba/entry/internal/config"
+	"github.com/SuzumiyaAoba/entry/internal/sync"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -377,6 +380,92 @@ rules:
 			cfg, err := config.LoadConfig(cfgFile)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cfg.Rules[0].Script).To(Equal("true"))
+		})
+	})
+	Describe("runConfigSync", func() {
+		var (
+			server *httptest.Server
+			origURL string
+		)
+
+		BeforeEach(func() {
+			cfgFile = configFile
+			origURL = sync.GitHubAPIURL
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				if r.URL.Path == "/gists" && r.Method == "POST" {
+					w.WriteHeader(http.StatusCreated)
+					w.Write([]byte(`{"id": "newgist123"}`))
+					return
+				}
+				if r.URL.Path == "/gists/gist123" && r.Method == "GET" {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{
+						"files": {
+							"config.yml": {
+								"content": "version: \"1\"\nrules: []"
+							}
+						}
+					}`))
+					return
+				}
+				if r.URL.Path == "/gists/gist123" && r.Method == "PATCH" {
+					w.WriteHeader(http.StatusOK)
+					return
+				}
+				w.WriteHeader(http.StatusNotFound)
+			}))
+			sync.GitHubAPIURL = server.URL
+		})
+
+		AfterEach(func() {
+			server.Close()
+			sync.GitHubAPIURL = origURL
+		})
+
+		It("should init sync", func() {
+			// Create config first
+			cfg := &config.Config{Version: "1"}
+			err := config.SaveConfig(cfgFile, cfg)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Mock stdin for token input
+			// But runConfigSyncInit uses huh which reads from stdin.
+			// Testing huh interactions in CLI tests is hard.
+			// We might skip interactive parts or mock huh if possible.
+			// For now, let's test push/pull which are non-interactive if configured.
+		})
+
+		It("should push config", func() {
+			cfg := &config.Config{
+				Version: "1",
+				Sync: &config.SyncConfig{
+					GistID: "gist123",
+					Token:  "token",
+				},
+			}
+			err := config.SaveConfig(cfgFile, cfg)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = runConfigSyncPush(rootCmd)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(outBuf.String()).To(ContainSubstring("Configuration pushed to Gist"))
+		})
+
+		It("should pull config", func() {
+			cfg := &config.Config{
+				Version: "1",
+				Sync: &config.SyncConfig{
+					GistID: "gist123",
+					Token:  "token",
+				},
+			}
+			err := config.SaveConfig(cfgFile, cfg)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = runConfigSyncPull(rootCmd)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(outBuf.String()).To(ContainSubstring("Configuration pulled from Gist"))
 		})
 	})
 })

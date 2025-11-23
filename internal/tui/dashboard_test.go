@@ -62,4 +62,48 @@ var _ = Describe("Dashboard", func() {
 		Expect(m.Width).To(Equal(100))
 		Expect(m.Height).To(Equal(50))
 	})
+
+	It("should delete rule", func() {
+		// Select first rule
+		m.RulesList.Select(0)
+		
+		// Simulate Delete key
+		msg := tea.KeyMsg{Type: tea.KeyDelete}
+		newM, _ := m.Update(msg)
+		m = newM.(tui.Model)
+		
+		Expect(m.Cfg.Rules).To(HaveLen(1))
+		Expect(m.Cfg.Rules[0].Name).To(Equal("Rule 2"))
+	})
+
+	It("should enter add mode", func() {
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+		newM, _ := m.Update(msg)
+		m = newM.(tui.Model)
+		
+		Expect(m.Active).To(Equal(tui.TabEdit))
+		Expect(m.SelectedRuleIndex).To(Equal(-1))
+		Expect(m.EditForm).NotTo(BeNil())
+	})
+
+	It("should enter edit mode", func() {
+		m.RulesList.Select(0)
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}}
+		newM, _ := m.Update(msg)
+		m = newM.(tui.Model)
+		
+		Expect(m.Active).To(Equal(tui.TabEdit))
+		Expect(m.SelectedRuleIndex).To(Equal(0))
+		Expect(m.EditForm).NotTo(BeNil())
+	})
+
+	It("should show details", func() {
+		m.RulesList.Select(0)
+		msg := tea.KeyMsg{Type: tea.KeyEnter}
+		newM, _ := m.Update(msg)
+		m = newM.(tui.Model)
+		
+		Expect(m.ShowDetail).To(BeTrue())
+		Expect(m.DetailRule.Name).To(Equal("Rule 1"))
+	})
 })
