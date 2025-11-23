@@ -21,21 +21,57 @@ func executeWithDefault(cfg *config.Config, exec *executor.Executor, filename st
 }
 
 // executeRule executes a single rule with the appropriate options
-func executeRule(exec *executor.Executor, rule *config.Rule, filename string) error {
-	logger.Debug("Executing rule '%s' with command: %s", rule.Name, rule.Command)
+// Returns true if the rule was executed (matched), false otherwise
+func executeRule(exec *executor.Executor, rule *config.Rule, filename string) (bool, error) {
+	logger.Debug("Evaluating rule '%s'", rule.Name)
+	
+	command := rule.Command
+
+	// Handle Script
+	if rule.Script != "" {
+		scriptCmd, matched, err := exec.ExecuteScript(rule.Script, filename)
+		if err != nil {
+			return false, fmt.Errorf("script execution failed: %w", err)
+		}
+		if !matched {
+			logger.Debug("Script returned false/null, skipping rule")
+			return false, nil
+		}
+		if scriptCmd != "" {
+			command = scriptCmd
+		}
+	}
+
+	if command == "" {
+		// If script matched but returned true (bool) and no command is defined in rule
+		// We can't execute anything.
+		logger.Debug("Rule matched but no command to execute")
+		return true, nil
+	}
+
+	logger.Debug("Executing rule '%s' with command: %s", rule.Name, command)
 	opts := executor.ExecutionOptions{
 		Background: rule.Background,
 		Terminal:   rule.Terminal,
 	}
-	return exec.Execute(rule.Command, filename, opts)
+	if err := exec.Execute(command, filename, opts); err != nil {
+		return true, err
+	}
+	return true, nil
 }
 
 // executeRules executes all matched rules (with fallthrough support)
 func executeRules(exec *executor.Executor, rules []*config.Rule, filename string) error {
-	logger.Info("Executing %d matched rules for %s", len(rules), filename)
+	logger.Info("Processing %d matched rules for %s", len(rules), filename)
 	for _, rule := range rules {
-		if err := executeRule(exec, rule, filename); err != nil {
+		executed, err := executeRule(exec, rule, filename)
+		if err != nil {
 			return err
+		}
+		if executed {
+			if !rule.Fallthrough {
+				return nil
+			}
 		}
 	}
 	return nil

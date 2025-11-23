@@ -60,6 +60,7 @@ func init() {
 	configAddCmd.Flags().Bool("background", false, "Run in background")
 	configAddCmd.Flags().Bool("fallthrough", false, "Continue matching other rules")
 	configAddCmd.Flags().StringSlice("os", nil, "OS constraints (e.g. darwin, linux)")
+	configAddCmd.Flags().String("script", "", "JavaScript condition/command")
 	configAddCmd.MarkFlagRequired("cmd")
 
 	configCmd.AddCommand(configInitCmd)
@@ -73,6 +74,7 @@ func init() {
 	configCmd.AddCommand(configMoveCmd)
 	configCmd.AddCommand(configExportCmd)
 	configCmd.AddCommand(configImportCmd)
+	configCmd.AddCommand(configSyncCmd)
 }
 
 func runConfigList(cmd *cobra.Command) error {
@@ -120,6 +122,7 @@ func runConfigAdd(cmd *cobra.Command, args []string) error {
 	background, _ := cmd.Flags().GetBool("background")
 	isFallthrough, _ := cmd.Flags().GetBool("fallthrough")
 	osList, _ := cmd.Flags().GetStringSlice("os")
+	script, _ := cmd.Flags().GetString("script")
 
 	if command == "" {
 		return fmt.Errorf("--cmd is required")
@@ -152,6 +155,7 @@ func runConfigAdd(cmd *cobra.Command, args []string) error {
 		Background:  background,
 		Fallthrough: isFallthrough,
 		OS:          osList,
+		Script:      script,
 	}
 
 	if ext != "" {

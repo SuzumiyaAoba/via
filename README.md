@@ -11,8 +11,14 @@ Instead of remembering different commands for every file type (`cat`, `open`, `v
 -   **Regex Matching**: Match filenames like `.*_test.go` to run tests.
 -   **MIME Type Matching**: Handle files based on content type (e.g., `image/.*`).
 -   **URL Scheme Matching**: Open `https://` or `ftp://` links with specific browsers or tools.
+-   **JavaScript Scripting**: Use JavaScript for complex matching logic and dynamic command generation.
+
+### 🔄 Remote Sync
+-   **Gist Sync**: Synchronize your configuration across machines using GitHub Gists.
+-   **Backup & Restore**: Easily backup your rules and restore them anywhere.
 
 ### ⚡ Power User Tools
+-   **TUI Dashboard**: Manage rules, view history, and sync status in a unified terminal interface.
 -   **Interactive Mode**: Ambiguous match? Select the right rule from a beautiful TUI.
 -   **Dry Run**: Preview exactly what command will run without executing it.
 -   **Explain Mode**: Debug your configuration by seeing exactly why a rule matched (or didn't).
@@ -57,6 +63,23 @@ If you have multiple rules that could apply to a file (e.g., "Edit Markdown" and
 ```bash
 et -s document.md
 ```
+
+### TUI Dashboard (`:dashboard`)
+
+Launch the comprehensive TUI dashboard to manage rules, view command history, and check sync status:
+
+```bash
+et :dashboard
+```
+
+### Command History (`:history`)
+
+View and re-run previously executed commands:
+
+```bash
+et :history
+```
+
 
 ### Explain Mode (`--explain`)
 
@@ -109,7 +132,35 @@ et :config set-default "vim {{.File}}"
 
 # Edit rules interactively
 et :config edit
+
+# Reorder rules (move rule at index 3 to index 1)
+et :config move 3 1
+
+# Manage Aliases
+et :config alias add ll "ls -la"
+et :config alias list
+et :config alias remove ll
+
+# Import/Export Configuration
+et :config export backup.yml
+et :config import backup.yml
 ```
+
+### Remote Sync
+
+Synchronize your configuration using GitHub Gists:
+
+```bash
+# Initialize sync (creates a new Gist or links existing)
+et :config sync init
+
+# Push local config to Gist
+et :config sync push
+
+# Pull config from Gist
+et :config sync pull
+```
+
 
 ### Config Add Flags
 
@@ -125,6 +176,7 @@ et :config edit
 | `--background` | Run in background. |
 | `--fallthrough` | Continue matching other rules. |
 | `--os` | Comma-separated list of OS constraints. |
+| `--script` | JavaScript condition/command (e.g. `file.endsWith('.md')`). |
 
 ### Rule Reference
 
@@ -142,6 +194,7 @@ A rule in `config.yml` can have the following fields:
 | `background` | bool | If `true`, runs the command in the background (detached). |
 | `fallthrough` | bool | If `true`, continues matching subsequent rules even if this one matches. |
 | `os` | list | List of OSs this rule applies to (e.g., `["darwin", "linux"]`). |
+| `script` | string | JavaScript code that returns a boolean (match) or string (command). |
 
 ### Configuration File Structure
 

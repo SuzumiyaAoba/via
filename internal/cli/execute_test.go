@@ -168,7 +168,7 @@ var _ = Describe("Execution helpers", func() {
 			rule := &config.Rule{
 				Command: "cat {{.File}}",
 			}
-			err := executeRule(exec, rule, "test.txt")
+			_, err := executeRule(exec, rule, "test.txt")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outBuf.String()).To(ContainSubstring("cat test.txt"))
 		})
@@ -178,7 +178,7 @@ var _ = Describe("Execution helpers", func() {
 				Command:    "open {{.File}}",
 				Background: true,
 			}
-			err := executeRule(exec, rule, "test.txt")
+			_, err := executeRule(exec, rule, "test.txt")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outBuf.String()).To(ContainSubstring("(background)"))
 		})

@@ -38,7 +38,7 @@ func Match(rules []config.Rule, filename string) ([]*config.Rule, error) {
 
 		// Check Scheme
 		if rule.Scheme != "" {
-			if isURL && strings.ToLower(u.Scheme) == strings.ToLower(rule.Scheme) {
+			if isURL && strings.EqualFold(u.Scheme, rule.Scheme) {
 				matched = true
 			} else {
 				// If scheme is specified but doesn't match, skip this rule
@@ -86,6 +86,11 @@ func Match(rules []config.Rule, filename string) ([]*config.Rule, error) {
 			}
 		}
 
+		// Check Script
+		if !matched && rule.Script != "" {
+			matched = true
+		}
+
 		if matched {
 			matches = append(matches, rule)
 			if !rule.Fallthrough {
@@ -123,7 +128,7 @@ func MatchAll(rules []config.Rule, filename string) ([]*config.Rule, error) {
 
 		// Check Scheme
 		if rule.Scheme != "" {
-			if isURL && strings.ToLower(u.Scheme) == strings.ToLower(rule.Scheme) {
+			if isURL && strings.EqualFold(u.Scheme, rule.Scheme) {
 				matches = append(matches, rule)
 				continue
 			}

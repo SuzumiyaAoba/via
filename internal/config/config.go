@@ -19,7 +19,8 @@ type Rule struct {
 	Background bool     `yaml:"background,omitempty"`
 	Terminal   bool     `yaml:"terminal,omitempty"`
 	Fallthrough bool    `yaml:"fallthrough,omitempty"`
-	Command    string   `yaml:"command"`
+	Command    string   `yaml:"command,omitempty"`
+	Script     string   `yaml:"script,omitempty"` // JavaScript code
 }
 
 type Config struct {
@@ -28,6 +29,12 @@ type Config struct {
 	Default        string            `yaml:"default,omitempty"` // Shorter alias for DefaultCommand
 	Aliases        map[string]string `yaml:"aliases,omitempty"`
 	Rules          []Rule            `yaml:"rules"`
+	Sync           *SyncConfig       `yaml:"sync,omitempty"`
+}
+
+type SyncConfig struct {
+	GistID string `yaml:"gist_id,omitempty"`
+	Token  string `yaml:"token,omitempty"` // Optional: usually passed via env var or flag, but can be stored
 }
 
 func LoadConfig(path string) (*Config, error) {

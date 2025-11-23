@@ -85,7 +85,8 @@ func executeSelectedOption(cfg *config.Config, exec *executor.Executor, selected
 	if selected.IsSystem {
 		return executeWithDefault(cfg, exec, filename)
 	}
-	return executeRule(exec, selected.Rule, filename)
+	_, err := executeRule(exec, selected.Rule, filename)
+	return err
 }
 
 func handleInteractive(cfg *config.Config, exec *executor.Executor, filename string) error {
