@@ -18,13 +18,18 @@ var dashboardCmd = &cobra.Command{
 }
 
 func runDashboard(cmd *cobra.Command) error {
+	configPath, err := config.GetConfigPath(cfgFile)
+	if err != nil {
+		return err
+	}
+
 	cfg, err := config.LoadConfig(cfgFile)
 	if err != nil {
 		// If config doesn't exist, start with empty config
 		cfg = &config.Config{Version: "1"}
 	}
 
-	model, err := tui.NewModel(cfg)
+	model, err := tui.NewModel(cfg, configPath)
 	if err != nil {
 		return err
 	}

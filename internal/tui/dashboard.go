@@ -118,19 +118,17 @@ func (i HistoryItem) FilterValue() string { return i.Title() }
 type keyMap struct {
 	Tab      key.Binding
 	ShiftTab key.Binding
-	Quit     key.Binding
-	Up       key.Binding
-	Down     key.Binding
+	Delete   key.Binding
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Tab, k.Quit}
+	return []key.Binding{k.Tab, k.Delete, k.Quit}
 }
 
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Tab, k.ShiftTab, k.Quit},
-		{k.Up, k.Down},
+		{k.Up, k.Down, k.Delete},
 	}
 }
 
@@ -155,10 +153,15 @@ var keys = keyMap{
 		key.WithKeys("down", "j"),
 		key.WithHelp("↓/j", "down"),
 	),
+	Delete: key.NewBinding(
+		key.WithKeys("d", "delete"),
+		key.WithHelp("d", "delete rule"),
+	),
 }
 
 type Model struct {
 	Cfg         *config.Config
+	ConfigPath  string
 	History     []history.HistoryEntry
 	Active      Tab
 	Width       int
@@ -169,7 +172,7 @@ type Model struct {
 	Help        help.Model
 }
 
-func NewModel(cfg *config.Config) (Model, error) {
+func NewModel(cfg *config.Config, configPath string) (Model, error) {
 	hist, _ := history.LoadHistory()
 
 	// Setup Rules List
@@ -192,6 +195,7 @@ func NewModel(cfg *config.Config) (Model, error) {
 
 	return Model{
 		Cfg:         cfg,
+		ConfigPath:  configPath,
 		History:     hist,
 		Active:      TabRules,
 		RulesList:   rulesList,
@@ -236,6 +240,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.Active--
 			}
 			return m, nil
+		case key.Matches(msg, keys.Delete):
+			if m.Active == TabRules && len(m.Cfg.Rules) > 0 {
+				index := m.RulesList.Index()
+				if index >= 0 && index < len(m.Cfg.Rules) {
+					// Remove from slice
+					m.Cfg.Rules = append(m.Cfg.Rules[:index], m.Cfg.Rules[index+1:]...)
+					
+					// Save config
+					if err := config.SaveConfig(m.ConfigPath, m.Cfg); err != nil {
+						// Handle error (maybe show a status message?)
+						// For now, just ignore or log if we had a logger here
+					}
+
+					// Remove from list
+					m.RulesList.RemoveItem(index)
+					
+					// Adjust selection if needed (list handles this mostly)
+				}
+			}
 		}
 	}
 
