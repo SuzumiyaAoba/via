@@ -18,6 +18,7 @@ var _ = Describe("Match command", func() {
 	)
 
 	BeforeEach(func() {
+		resetGlobals()
 		tmpDir = GinkgoT().TempDir()
 		cfgFile = filepath.Join(tmpDir, "config.yml")
 		
@@ -35,21 +36,9 @@ var _ = Describe("Match command", func() {
 		err := config.SaveConfig(cfgFile, cfg)
 		Expect(err).NotTo(HaveOccurred())
 
-		// Set global cfgFile variable in cli package (if accessible)
-		// Since we are in same package 'cli', we can access 'cfgFile' var from root.go
-		// But wait, root.go defines 'cfgFile' var.
-		// We need to set it.
-		// However, runMatch uses the global cfgFile variable.
-		// We should set it here.
-		// But wait, 'cfgFile' in root.go is 'var cfgFile string'.
-		// We can set it.
-		setCfgFile(cfgFile) // Helper to set the unexported var if needed, or just set it if exported?
-		// It is unexported in root.go: var cfgFile string
-		// But we are in package cli, so we can access it!
-		
 		outBuf.Reset()
-		matchCmd.SetOut(&outBuf)
-		matchCmd.SetErr(&outBuf)
+		rootCmd.SetOut(&outBuf)
+		rootCmd.SetErr(&outBuf)
 	})
 
 	It("should match existing file", func() {
@@ -58,7 +47,11 @@ var _ = Describe("Match command", func() {
 		err := os.WriteFile(f, []byte("content"), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = runMatch(matchCmd, f)
+		// Use RunE directly to avoid cobra Execute re-entrancy issues in tests
+		err = rootCmd.RunE(rootCmd, []string{"--config", cfgFile, ":match", f})
+		if err != nil {
+			GinkgoWriter.Printf("Execute error: %v\nOutput: %s\n", err, outBuf.String())
+		}
 		Expect(err).NotTo(HaveOccurred())
 		Expect(outBuf.String()).To(ContainSubstring("Text Rule"))
 	})
@@ -69,13 +62,10 @@ var _ = Describe("Match command", func() {
 		err := os.WriteFile(f, []byte("content"), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = runMatch(matchCmd, f)
+		err = rootCmd.RunE(rootCmd, []string{"--config", cfgFile, ":match", f})
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("no match found"))
 	})
 })
 
-// Helper to set cfgFile since we are in the same package
-func setCfgFile(path string) {
-	cfgFile = path
-}
+

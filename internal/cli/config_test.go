@@ -21,6 +21,7 @@ var _ = Describe("Config commands", func() {
 	)
 
 	BeforeEach(func() {
+		resetGlobals()
 		tmpDir = GinkgoT().TempDir()
 		configFile = filepath.Join(tmpDir, "config.yml")
 		outBuf.Reset()
@@ -447,7 +448,7 @@ rules:
 			err := config.SaveConfig(cfgFile, cfg)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = runConfigSyncPush(rootCmd)
+			err = rootCmd.RunE(rootCmd, []string{"--config", cfgFile, ":config", "sync", "push"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outBuf.String()).To(ContainSubstring("Configuration pushed to Gist"))
 		})
@@ -463,7 +464,7 @@ rules:
 			err := config.SaveConfig(cfgFile, cfg)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = runConfigSyncPull(rootCmd)
+			err = rootCmd.RunE(rootCmd, []string{"--config", cfgFile, ":config", "sync", "pull"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outBuf.String()).To(ContainSubstring("Configuration pulled from Gist"))
 		})

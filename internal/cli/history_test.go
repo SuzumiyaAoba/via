@@ -19,6 +19,7 @@ var _ = Describe("History command", func() {
 	)
 
 	BeforeEach(func() {
+		resetGlobals()
 		tmpDir = GinkgoT().TempDir()
 		historyFile = filepath.Join(tmpDir, "history.json")
 		history.SetHistoryPath(historyFile)
@@ -32,7 +33,7 @@ var _ = Describe("History command", func() {
 	})
 
 	It("should show empty message if no history", func() {
-		err := runHistory(historyCmd)
+		err := rootCmd.RunE(rootCmd, []string{":history"})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(outBuf.String()).To(ContainSubstring("No history available"))
 	})
@@ -43,9 +44,7 @@ var _ = Describe("History command", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Run clear command
-		// We need to execute the clear subcommand logic.
-		// Since historyClearCmd is a subcommand, we can run its RunE
-		err = historyClearCmd.RunE(historyClearCmd, []string{})
+		err = rootCmd.RunE(rootCmd, []string{":history", "clear"})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(outBuf.String()).To(ContainSubstring("History cleared"))
 
