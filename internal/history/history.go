@@ -98,3 +98,13 @@ func saveHistory(entries []HistoryEntry) error {
 
 	return os.WriteFile(path, data, 0644)
 }
+
+func ClearHistory() error {
+	_, err := GetHistoryPath()
+	if err != nil {
+		return err
+	}
+	
+	// Just write empty array
+	return saveHistory([]HistoryEntry{})
+}

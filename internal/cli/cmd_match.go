@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/SuzumiyaAoba/entry/internal/config"
 	"github.com/SuzumiyaAoba/entry/internal/matcher"
@@ -40,6 +39,5 @@ func runMatch(cmd *cobra.Command, filename string) error {
 	}
 
 	// No match found
-	os.Exit(1)
-	return nil
+	return fmt.Errorf("no match found")
 }

@@ -38,6 +38,13 @@ var _ = Describe("Execute", func() {
 		err := exec.Execute("echo {{.File}}", "test.txt", ExecutionOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	It("should handle background execution", func() {
+		exec := NewExecutor(GinkgoWriter, false)
+		// Use a command that exits immediately to avoid hanging
+		err := exec.Execute("true", "test.txt", ExecutionOptions{Background: true})
+		Expect(err).NotTo(HaveOccurred())
+	})
 })
 
 var _ = Describe("ExecuteCommand", func() {

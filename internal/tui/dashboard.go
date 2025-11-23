@@ -121,6 +121,10 @@ type keyMap struct {
 	Tab      key.Binding
 	ShiftTab key.Binding
 	Delete   key.Binding
+	Edit     key.Binding
+	Add      key.Binding
+	MoveUp   key.Binding
+	MoveDown key.Binding
 	Enter    key.Binding
 	Quit     key.Binding
 	Up       key.Binding
@@ -276,7 +280,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Global keys (except when editing)
-		if m.Active != TabEdit && !m.RulesList.FilterState().Filtering && !m.HistoryList.FilterState().Filtering {
+		if m.Active != TabEdit && m.RulesList.FilterState() != list.Filtering && m.HistoryList.FilterState() != list.Filtering {
 			switch {
 			case key.Matches(msg, keys.Quit):
 				return m, tea.Quit
@@ -294,7 +298,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Context specific keys
-		if m.Active == TabRules && !m.RulesList.FilterState().Filtering {
+		if m.Active == TabRules && m.RulesList.FilterState() != list.Filtering {
 			switch {
 			case key.Matches(msg, keys.Delete):
 				if len(m.Cfg.Rules) > 0 {
