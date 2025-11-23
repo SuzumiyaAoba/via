@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"text/template"
 
 	"github.com/SuzumiyaAoba/entry/internal/history"
@@ -87,7 +88,12 @@ func (e *Executor) Execute(commandTmpl string, file string, opts ExecutionOption
 		cmd.Stdin = nil
 		cmd.Stdout = nil
 		cmd.Stderr = nil
-		// TODO: Set SysProcAttr for full detachment if needed
+		
+		// Set SysProcAttr to detach the process
+		// On Unix-like systems, Setsid creates a new session, detaching from the controlling terminal.
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setsid: true,
+		}
 		
 		if err := cmd.Start(); err != nil {
 			return fmt.Errorf("failed to start background command: %w", err)

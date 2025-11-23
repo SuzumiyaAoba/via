@@ -95,64 +95,8 @@ func matchRule(rule *config.Rule, filename string) (bool, error) {
 				return true, nil
 			}
 		}
-		// If extensions are specified but none matched, check other conditions?
-		// No, usually extensions are a primary match condition.
-		// But wait, the original logic was:
-		// if !matched && len(rule.Extensions) > 0 { ... }
-		// It was OR logic between conditions?
-		// No, it was sequential checks.
-		// Let's re-read original logic carefully.
-		
-		// Original Match:
-		// 1. Check OS -> if fail, continue (AND)
-		// 2. Check Scheme -> if set: if match, matched=true. else continue (AND)
-		// 3. Check Extensions -> if !matched && set: if match, matched=true.
-		// 4. Check Regex -> if !matched && set: if match, matched=true.
-		// 5. Check MIME -> if !matched && set: if match, matched=true.
-		// 6. Check Script -> if !matched && set: matched=true.
-		
-		// So it is:
-		// OS (AND)
-		// (Scheme OR Extensions OR Regex OR MIME OR Script)
-		
-		// But Scheme check was special: if set and not match, it skips the rule.
-		// So Scheme is also AND if set?
-		// "If scheme is specified but doesn't match, skip this rule" -> Yes, AND.
-		
-		// So:
-		// OS (AND)
-		// Scheme (AND if set)
-		// (Extensions OR Regex OR MIME OR Script)
-		
-		// Wait, if Scheme matches, it sets matched=true.
-		// And subsequent checks are `if !matched`.
-		// So if Scheme matches, we are done? Yes.
-		
-		// So:
-		// If OS fails -> return false
-		// If Scheme set:
-		//    If match -> return true
-		//    If no match -> return false
-		
-		// If Extensions set:
-		//    If match -> return true
-		//    If no match -> continue to next check (Regex)
-		
-		// Wait, if Extensions set and NO match, do we fail?
-		// Original code:
-		// if !matched && len(rule.Extensions) > 0 { ... if match { matched = true } }
-		// It doesn't say "else return false".
-		// So if extensions don't match, it falls through to Regex.
-		
-		// BUT, usually if you specify extensions, you expect one of them to match.
-		// However, the code allows a rule with Extensions AND Regex.
-		// If extensions don't match, maybe regex does?
-		// Example: ext: [txt], regex: .*foo
-		// file: foo (no ext). Extensions check fails. Regex check passes.
-		// Should it match?
-		// The original code allows this.
-		
-		// So my refactoring must preserve this "OR" behavior for the content checks.
+		// If extensions are specified but none matched, we continue to check other conditions (Regex, MIME, etc.)
+		// This allows a rule to match EITHER by extension OR by regex/mime.
 	}
 
 	// Check extensions
