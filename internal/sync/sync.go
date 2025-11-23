@@ -25,11 +25,17 @@ type Gist struct {
 }
 
 type Client struct {
-	Token string
+	Token      string
+	httpClient *http.Client
 }
 
 func NewClient(token string) *Client {
-	return &Client{Token: token}
+	return &Client{
+		Token: token,
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+	}
 }
 
 func (c *Client) GetGist(gistID string) (*config.Config, error) {
@@ -42,7 +48,7 @@ func (c *Client) GetGist(gistID string) (*config.Config, error) {
 		req.Header.Set("Authorization", "token "+c.Token)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +104,7 @@ func (c *Client) UpdateGist(gistID string, cfg *config.Config) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -141,7 +147,7 @@ func (c *Client) CreateGist(cfg *config.Config, public bool) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
