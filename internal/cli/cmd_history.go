@@ -9,11 +9,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func init() {
+	historyCmd.AddCommand(historyClearCmd)
+}
+
 var historyCmd = &cobra.Command{
 	Use:   ":history",
 	Short: "View and execute command history",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runHistory(cmd)
+	},
+}
+
+var historyClearCmd = &cobra.Command{
+	Use:   "clear",
+	Short: "Clear command history",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := history.ClearHistory(); err != nil {
+			return fmt.Errorf("failed to clear history: %w", err)
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), "History cleared")
+		return nil
 	},
 }
 

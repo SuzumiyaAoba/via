@@ -121,20 +121,21 @@ type keyMap struct {
 	Tab      key.Binding
 	ShiftTab key.Binding
 	Delete   key.Binding
-	Edit     key.Binding
+	Enter    key.Binding
 	Quit     key.Binding
 	Up       key.Binding
 	Down     key.Binding
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Tab, k.Edit, k.Delete, k.Quit}
+	return []key.Binding{k.Tab, k.Add, k.Edit, k.Delete, k.Enter, k.Quit}
 }
 
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Tab, k.ShiftTab, k.Quit},
-		{k.Up, k.Down, k.Edit, k.Delete},
+		{k.Up, k.Down, k.Add, k.Edit, k.Delete},
+		{k.MoveUp, k.MoveDown, k.Enter},
 	}
 }
 
@@ -167,6 +168,22 @@ var keys = keyMap{
 		key.WithKeys("e"),
 		key.WithHelp("e", "edit rule"),
 	),
+	Add: key.NewBinding(
+		key.WithKeys("a"),
+		key.WithHelp("a", "add rule"),
+	),
+	MoveUp: key.NewBinding(
+		key.WithKeys("shift+up", "K"),
+		key.WithHelp("K", "move up"),
+	),
+	MoveDown: key.NewBinding(
+		key.WithKeys("shift+down", "J"),
+		key.WithHelp("J", "move down"),
+	),
+	Enter: key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "show details"),
+	),
 }
 
 type Model struct {
@@ -183,8 +200,13 @@ type Model struct {
 	
 	// Edit State
 	EditForm          *huh.Form
-	SelectedRuleIndex int
+	SelectedRuleIndex int // -1 for new rule
 	EditExtensionsStr string
+	NewRule           config.Rule // Temporary storage for new rule
+	
+	// Detail State
+	ShowDetail bool
+	DetailRule config.Rule
 }
 
 func NewModel(cfg *config.Config, configPath string) (Model, error) {
@@ -198,6 +220,7 @@ func NewModel(cfg *config.Config, configPath string) (Model, error) {
 	rulesList := list.New(ruleItems, list.NewDefaultDelegate(), 0, 0)
 	rulesList.Title = "Rules"
 	rulesList.SetShowHelp(false)
+	rulesList.SetFilteringEnabled(true) // Enable filtering
 
 	// Setup History List
 	histItems := lo.Map(hist, func(h history.HistoryEntry, _ int) list.Item {
@@ -207,6 +230,7 @@ func NewModel(cfg *config.Config, configPath string) (Model, error) {
 	historyList := list.New(histItems, list.NewDefaultDelegate(), 0, 0)
 	historyList.Title = "History"
 	historyList.SetShowHelp(false)
+	historyList.SetFilteringEnabled(true) // Enable filtering
 
 	return Model{
 		Cfg:         cfg,
@@ -242,8 +266,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Help.Width = msg.Width
 
 	case tea.KeyMsg:
+		// Handle Detail View
+		if m.ShowDetail {
+			if key.Matches(msg, keys.Quit) || key.Matches(msg, keys.Enter) || key.Matches(msg, keys.Tab) {
+				m.ShowDetail = false
+				return m, nil
+			}
+			return m, nil
+		}
+
 		// Global keys (except when editing)
-		if m.Active != TabEdit {
+		if m.Active != TabEdit && !m.RulesList.FilterState().Filtering && !m.HistoryList.FilterState().Filtering {
 			switch {
 			case key.Matches(msg, keys.Quit):
 				return m, tea.Quit
@@ -261,7 +294,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Context specific keys
-		if m.Active == TabRules {
+		if m.Active == TabRules && !m.RulesList.FilterState().Filtering {
 			switch {
 			case key.Matches(msg, keys.Delete):
 				if len(m.Cfg.Rules) > 0 {
@@ -279,6 +312,70 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.RulesList.RemoveItem(index)
 					}
 				}
+			case key.Matches(msg, keys.MoveUp):
+				index := m.RulesList.Index()
+				if index > 0 && index < len(m.Cfg.Rules) {
+					// Swap in config
+					m.Cfg.Rules[index], m.Cfg.Rules[index-1] = m.Cfg.Rules[index-1], m.Cfg.Rules[index]
+					
+					// Save config
+					config.SaveConfig(m.ConfigPath, m.Cfg)
+					
+					// Update list items
+					m.RulesList.SetItem(index, RuleItem{Rule: m.Cfg.Rules[index]})
+					m.RulesList.SetItem(index-1, RuleItem{Rule: m.Cfg.Rules[index-1]})
+					
+					// Move selection
+					m.RulesList.Select(index - 1)
+				}
+			case key.Matches(msg, keys.MoveDown):
+				index := m.RulesList.Index()
+				if index >= 0 && index < len(m.Cfg.Rules)-1 {
+					// Swap in config
+					m.Cfg.Rules[index], m.Cfg.Rules[index+1] = m.Cfg.Rules[index+1], m.Cfg.Rules[index]
+					
+					// Save config
+					config.SaveConfig(m.ConfigPath, m.Cfg)
+					
+					// Update list items
+					m.RulesList.SetItem(index, RuleItem{Rule: m.Cfg.Rules[index]})
+					m.RulesList.SetItem(index+1, RuleItem{Rule: m.Cfg.Rules[index+1]})
+					
+					// Move selection
+					m.RulesList.Select(index + 1)
+				}
+			case key.Matches(msg, keys.Add):
+				m.SelectedRuleIndex = -1
+				m.NewRule = config.Rule{} // Reset new rule
+				m.EditExtensionsStr = ""
+				
+				// Create Form bound to NewRule
+				m.EditForm = huh.NewForm(
+					huh.NewGroup(
+						huh.NewInput().
+							Title("Name").
+							Value(&m.NewRule.Name),
+						huh.NewInput().
+							Title("Command").
+							Value(&m.NewRule.Command),
+						huh.NewInput().
+							Title("Extensions (comma separated)").
+							Value(&m.EditExtensionsStr),
+						huh.NewInput().
+							Title("Regex").
+							Value(&m.NewRule.Regex),
+						huh.NewConfirm().
+							Title("Terminal").
+							Value(&m.NewRule.Terminal),
+						huh.NewConfirm().
+							Title("Background").
+							Value(&m.NewRule.Background),
+					),
+				).WithTheme(huh.ThemeCharm())
+				
+				m.EditForm.Init()
+				m.Active = TabEdit
+
 			case key.Matches(msg, keys.Edit):
 				if len(m.Cfg.Rules) > 0 {
 					index := m.RulesList.Index()
@@ -318,6 +415,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.Active = TabEdit
 					}
 				}
+			case key.Matches(msg, keys.Enter):
+				if len(m.Cfg.Rules) > 0 {
+					index := m.RulesList.Index()
+					if index >= 0 && index < len(m.Cfg.Rules) {
+						m.DetailRule = m.Cfg.Rules[index]
+						m.ShowDetail = true
+					}
+				}
 			}
 		}
 	}
@@ -339,23 +444,43 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 
 			if m.EditForm.State == huh.StateCompleted {
-				// Parse extensions back to slice from the temporary string
-				rule := &m.Cfg.Rules[m.SelectedRuleIndex]
-				if m.EditExtensionsStr == "" {
-					rule.Extensions = []string{}
+				if m.SelectedRuleIndex == -1 {
+					// Adding new rule
+					// Parse extensions
+					if m.EditExtensionsStr != "" {
+						m.NewRule.Extensions = lo.Map(strings.Split(m.EditExtensionsStr, ","), func(item string, _ int) string {
+							return strings.TrimSpace(item)
+						})
+					}
+					
+					// Append to config
+					m.Cfg.Rules = append(m.Cfg.Rules, m.NewRule)
+					
+					// Save config
+					config.SaveConfig(m.ConfigPath, m.Cfg)
+					
+					// Add to list
+					m.RulesList.InsertItem(len(m.Cfg.Rules)-1, RuleItem{Rule: m.NewRule})
 				} else {
-					rule.Extensions = lo.Map(strings.Split(m.EditExtensionsStr, ","), func(item string, _ int) string {
-						return strings.TrimSpace(item)
-					})
-				}
+					// Editing existing rule
+					// Parse extensions back to slice from the temporary string
+					rule := &m.Cfg.Rules[m.SelectedRuleIndex]
+					if m.EditExtensionsStr == "" {
+						rule.Extensions = []string{}
+					} else {
+						rule.Extensions = lo.Map(strings.Split(m.EditExtensionsStr, ","), func(item string, _ int) string {
+							return strings.TrimSpace(item)
+						})
+					}
 
-				// Save config
-				if err := config.SaveConfig(m.ConfigPath, m.Cfg); err != nil {
-					// Handle error
+					// Save config
+					if err := config.SaveConfig(m.ConfigPath, m.Cfg); err != nil {
+						// Handle error
+					}
+					
+					// Update list item
+					m.RulesList.SetItem(m.SelectedRuleIndex, RuleItem{Rule: *rule})
 				}
-				
-				// Update list item
-				m.RulesList.SetItem(m.SelectedRuleIndex, RuleItem{Rule: *rule})
 
 				m.Active = TabRules
 				m.EditForm = nil
@@ -374,6 +499,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	if m.Active == TabEdit {
 		return windowStyle.Width(m.Width - windowStyle.GetHorizontalFrameSize()).Render(m.EditForm.View())
+	}
+
+	if m.ShowDetail {
+		return m.renderDetail()
 	}
 
 	doc := strings.Builder{}
@@ -409,6 +538,29 @@ func (m Model) View() string {
 	doc.WriteString(m.Help.View(keys))
 
 	return doc.String()
+}
+
+func (m Model) renderDetail() string {
+	s := strings.Builder{}
+	s.WriteString(titleStyle.Render("Rule Details"))
+	s.WriteString("\n\n")
+	
+	r := m.DetailRule
+	s.WriteString(fmt.Sprintf("Name:       %s\n", r.Name))
+	s.WriteString(fmt.Sprintf("Command:    %s\n", r.Command))
+	s.WriteString(fmt.Sprintf("Extensions: %s\n", strings.Join(r.Extensions, ", ")))
+	s.WriteString(fmt.Sprintf("Regex:      %s\n", r.Regex))
+	s.WriteString(fmt.Sprintf("MIME:       %s\n", r.Mime))
+	s.WriteString(fmt.Sprintf("Scheme:     %s\n", r.Scheme))
+	s.WriteString(fmt.Sprintf("Terminal:   %v\n", r.Terminal))
+	s.WriteString(fmt.Sprintf("Background: %v\n", r.Background))
+	s.WriteString(fmt.Sprintf("Fallthrough:%v\n", r.Fallthrough))
+	s.WriteString(fmt.Sprintf("OS:         %s\n", strings.Join(r.OS, ", ")))
+	s.WriteString(fmt.Sprintf("Script:     %s\n", r.Script))
+	
+	s.WriteString("\nPress Enter or Esc to close")
+	
+	return windowStyle.Width(m.Width - windowStyle.GetHorizontalFrameSize()).Render(s.String())
 }
 
 func (m Model) renderSync() string {

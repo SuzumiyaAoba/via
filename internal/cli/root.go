@@ -56,6 +56,7 @@ Simply type et :help [path to command] for full details.`,
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(historyCmd)
 	rootCmd.AddCommand(dashboardCmd)
+	rootCmd.AddCommand(matchCmd)
 }
 
 var rootCmd = &cobra.Command{
