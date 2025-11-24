@@ -76,4 +76,29 @@ var _ = Describe("Alias command", func() {
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("alias 'foo' not found"))
 	})
+
+	It("should list aliases", func() {
+		// Add aliases
+		cfg := &config.Config{
+			Version: "1",
+			Aliases: map[string]string{
+				"ll": "ls -la",
+				"gs": "git status",
+			},
+		}
+		err := config.SaveConfig(cfgFile, cfg)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = rootCmd.RunE(rootCmd, []string{"--config", cfgFile, ":config", "alias", "list"})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(outBuf.String()).To(ContainSubstring("Aliases:"))
+		Expect(outBuf.String()).To(ContainSubstring("ll: ls -la"))
+		Expect(outBuf.String()).To(ContainSubstring("gs: git status"))
+	})
+
+	It("should show message when no aliases exist", func() {
+		err := rootCmd.RunE(rootCmd, []string{"--config", cfgFile, ":config", "alias", "list"})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(outBuf.String()).To(ContainSubstring("No aliases defined"))
+	})
 })

@@ -616,4 +616,41 @@ rules:
 			Expect(outBuf.String()).To(ContainSubstring("cmd1"))
 		})
 	})
+	Describe("buildRuleLabel", func() {
+		It("should return name if present", func() {
+			rule := &config.Rule{Name: "My Rule"}
+			Expect(buildRuleLabel(rule)).To(Equal("My Rule"))
+		})
+
+		It("should return extensions if name is missing", func() {
+			rule := &config.Rule{Extensions: []string{"txt", "md"}}
+			Expect(buildRuleLabel(rule)).To(Equal("Extensions: txt,md"))
+		})
+
+		It("should return regex if name and extensions are missing", func() {
+			rule := &config.Rule{Regex: ".*"}
+			Expect(buildRuleLabel(rule)).To(Equal("Regex: .*"))
+		})
+
+		It("should return command if nothing else is present", func() {
+			rule := &config.Rule{Command: "echo hello"}
+			Expect(buildRuleLabel(rule)).To(Equal("Command: echo hello"))
+		})
+	})
+
+	Describe("runConfigEdit", func() {
+		BeforeEach(func() {
+			cfgFile = configFile
+		})
+
+		It("should fail if no rules available", func() {
+			cfg := &config.Config{Version: "1"}
+			err := config.SaveConfig(cfgFile, cfg)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = runConfigEdit(rootCmd)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("no rules available to edit"))
+		})
+	})
 })
