@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -226,6 +227,17 @@ var _ = Describe("Logger", func() {
 			path, err := GetDefaultLogPath()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(path).To(ContainSubstring(".config/entry/logs/entry.log"))
+		})
+
+		It("should return error if home dir fails", func() {
+			origUserHomeDir := UserHomeDir
+			UserHomeDir = func() (string, error) {
+				return "", fmt.Errorf("mock error")
+			}
+			defer func() { UserHomeDir = origUserHomeDir }()
+
+			_, err := GetDefaultLogPath()
+			Expect(err).To(HaveOccurred())
 		})
 	})
 

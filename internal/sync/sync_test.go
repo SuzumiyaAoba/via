@@ -114,4 +114,27 @@ var _ = Describe("Client", func() {
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("failed to parse config"))
 	})
+	It("should return error if update fails", func() {
+		// Mock server returning error
+		server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		})
+
+		cfg := &config.Config{Version: "1"}
+		err := client.UpdateGist("gist123", cfg)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to update gist"))
+	})
+
+	It("should return error if create fails", func() {
+		// Mock server returning error
+		server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		})
+
+		cfg := &config.Config{Version: "1"}
+		_, err := client.CreateGist(cfg, false)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to create gist"))
+	})
 })

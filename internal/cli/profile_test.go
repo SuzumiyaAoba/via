@@ -74,5 +74,42 @@ var _ = Describe("Profile commands", func() {
 			profilesDir := filepath.Join(filepath.Dir(configFile), "profiles")
 			Expect(fileExists(filepath.Join(profilesDir, "newprofile.yml"))).To(BeTrue())
 		})
+
+		It("should copy from named profile", func() {
+			// Create a source profile
+			profilesDir := filepath.Join(filepath.Dir(configFile), "profiles")
+			err := os.MkdirAll(profilesDir, 0755)
+			Expect(err).NotTo(HaveOccurred())
+			
+			srcProfile := filepath.Join(profilesDir, "source.yml")
+			err = os.WriteFile(srcProfile, []byte("version: '1'"), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = rootCmd.RunE(rootCmd, []string{"--config", cfgFile, ":config", "profile-copy", "source", "dest"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(outBuf.String()).To(ContainSubstring("Profile 'source' copied to 'dest'"))
+			Expect(fileExists(filepath.Join(profilesDir, "dest.yml"))).To(BeTrue())
+		})
+
+		It("should fail if source profile does not exist", func() {
+			err := rootCmd.RunE(rootCmd, []string{"--config", cfgFile, ":config", "profile-copy", "nonexistent", "dest"})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("source profile 'nonexistent' does not exist"))
+		})
+
+		It("should fail if target profile already exists", func() {
+			// Create target profile
+			profilesDir := filepath.Join(filepath.Dir(configFile), "profiles")
+			err := os.MkdirAll(profilesDir, 0755)
+			Expect(err).NotTo(HaveOccurred())
+			
+			targetProfile := filepath.Join(profilesDir, "existing.yml")
+			err = os.WriteFile(targetProfile, []byte{}, 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = rootCmd.RunE(rootCmd, []string{"--config", cfgFile, ":config", "profile-copy", "default", "existing"})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("target profile 'existing' already exists"))
+		})
 	})
 })

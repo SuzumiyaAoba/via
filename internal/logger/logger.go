@@ -175,9 +175,12 @@ func Error(format string, args ...interface{}) {
 	GetGlobal().Error(format, args...)
 }
 
+// UserHomeDir is a variable to allow mocking in tests
+var UserHomeDir = os.UserHomeDir
+
 // GetDefaultLogPath returns the default log file path
 func GetDefaultLogPath() (string, error) {
-	home, err := os.UserHomeDir()
+	home, err := UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get user home dir: %w", err)
 	}

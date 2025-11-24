@@ -1,6 +1,7 @@
 package history_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -96,5 +97,26 @@ var _ = Describe("History", func() {
 
 		err = history.AddEntry("cmd", "rule")
 		Expect(err).To(HaveOccurred())
+	})
+
+	Describe("GetHistoryPath", func() {
+		It("should return default path", func() {
+			history.SetHistoryPath("")
+			path, err := history.GetHistoryPath()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(path).To(ContainSubstring(".config/entry/history.json"))
+		})
+
+		It("should return error if home dir fails", func() {
+			history.SetHistoryPath("")
+			origUserHomeDir := history.UserHomeDir
+			history.UserHomeDir = func() (string, error) {
+				return "", fmt.Errorf("mock error")
+			}
+			defer func() { history.UserHomeDir = origUserHomeDir }()
+
+			_, err := history.GetHistoryPath()
+			Expect(err).To(HaveOccurred())
+		})
 	})
 })

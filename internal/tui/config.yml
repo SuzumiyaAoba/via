@@ -2,3 +2,5 @@ version: ""
 rules:
     - name: Rule 2
       command: cmd2
+    - name: Rule 1
+      command: cmd1
