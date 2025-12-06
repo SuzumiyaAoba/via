@@ -12,8 +12,8 @@ func init() {
 
 var versionCmd = &cobra.Command{
 	Use:   ":version",
-	Short: "Print the version number of entry",
+	Short: "Print the version number of via",
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Printf("et %s\n", Version)
+		cmd.Printf("vv %s\n", Version)
 	},
 }

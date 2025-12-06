@@ -1,8 +1,8 @@
-# Entry (et)
+# Via (vv)
 
-Entry (`et`) is a smart CLI file association tool written in Go. It acts as a unified entry point for your workflow, allowing you to execute specific commands based on file extensions, regex patterns, MIME types, or URL schemes.
+Via (`vv`) is a smart CLI file association tool written in Go. It acts as a unified entry point for your workflow, allowing you to execute specific commands based on file extensions, regex patterns, MIME types, or URL schemes.
 
-Instead of remembering different commands for every file type (`cat`, `open`, `vim`, `mpv`, etc.), just use `et`.
+Instead of remembering different commands for every file type (`cat`, `open`, `vim`, `mpv`, etc.), just use `vv`.
 
 ## Features
 
@@ -32,7 +32,7 @@ Instead of remembering different commands for every file type (`cat`, `open`, `v
 
 Why use `et` over other tools?
 
-| Feature | Entry (`et`) | `open` / `xdg-open` | `handlr` | `finicky` |
+| Feature | Via (`vv`) | `open` / `xdg-open` | `handlr` | `finicky` |
 | :--- | :---: | :---: | :---: | :---: |
 | **Scope** | Universal File/URL Launcher | System Default Opener | Default App Manager | Browser Selector |
 | **Matching Logic** | Ext, Regex, MIME, Script | Ext / MIME | Ext / MIME / Regex | URL Patterns |
@@ -41,16 +41,16 @@ Why use `et` over other tools?
 | **TUI Dashboard** | ✅ Yes | ❌ No | ❌ No | ❌ No |
 | **Config Sync** | ✅ Built-in Gist Sync | ❌ No | ❌ No | ❌ No |
 
-*   **vs `open` (macOS) / `xdg-open` (Linux)**: These are system utilities that rely on global OS associations. `et` gives you granular control *on top* of or instead of these. For example, you can make `et` open `*_test.go` files in a terminal running tests, while opening normal `.go` files in your editor. `open` cannot distinguish files by regex.
-*   **vs `handlr`**: `handlr` is great for managing default applications and MIME types on Linux. `et` focuses more on being a workflow tool with features like interactive selection, dry-run, and a TUI dashboard, rather than just managing system associations.
-*   **vs `finicky`**: `finicky` is fantastic for routing URLs to specific browsers on macOS. `et` brings that same power to *local files* and works cross-platform. You can use `et` to route URLs too!
+*   **vs `open` (macOS) / `xdg-open` (Linux)**: These are system utilities that rely on global OS associations. `vv` gives you granular control *on top* of or instead of these. For example, you can make `vv` open `*_test.go` files in a terminal running tests, while opening normal `.go` files in your editor. `open` cannot distinguish files by regex.
+*   **vs `handlr`**: `handlr` is great for managing default applications and MIME types on Linux. `vv` focuses more on being a workflow tool with features like interactive selection, dry-run, and a TUI dashboard, rather than just managing system associations.
+*   **vs `finicky`**: `finicky` is fantastic for routing URLs to specific browsers on macOS. `vv` brings that same power to *local files* and works cross-platform. You can use `vv` to route URLs too!
 
 ## Installation
 
 ### From Source
 
 ```bash
-go install github.com/SuzumiyaAoba/entry/cmd/et@latest
+go install github.com/SuzumiyaAoba/via/cmd/vv@latest
 ```
 
 ## Usage
@@ -59,15 +59,15 @@ go install github.com/SuzumiyaAoba/entry/cmd/et@latest
 
 ```bash
 # Open a file using the matched rule
-et document.pdf
+vv document.pdf
 
 # Open a URL
-et https://example.com
+vv https://example.com
 ```
 
 ### Matching Precedence
 
-Entry evaluates rules in the following order:
+Via evaluates rules in the following order:
 1.  **Extension**: Exact match on file extension.
 2.  **Regex**: Pattern match on the filename.
 3.  **MIME Type**: Match on the file's detected MIME type.
@@ -78,7 +78,7 @@ Entry evaluates rules in the following order:
 If you have multiple rules that could apply to a file (e.g., "Edit Markdown" and "View Markdown"), use interactive mode:
 
 ```bash
-et -s document.md
+vv -s document.md
 ```
 
 ### TUI Dashboard (`:dashboard`)
@@ -86,7 +86,7 @@ et -s document.md
 Launch the comprehensive TUI dashboard to manage rules, view command history, and check sync status:
 
 ```bash
-et :dashboard
+vv :dashboard
 ```
 
 ### Command History (`:history`)
@@ -94,7 +94,7 @@ et :dashboard
 View and re-run previously executed commands:
 
 ```bash
-et :history
+vv :history
 ```
 
 
@@ -103,7 +103,7 @@ et :history
 Not sure why a file is opening with the wrong command?
 
 ```bash
-et --explain document.pdf
+vv --explain document.pdf
 ```
 
 ### Dry Run (`--dry-run`)
@@ -111,7 +111,7 @@ et --explain document.pdf
 See the generated command without running it:
 
 ```bash
-et --dry-run document.pdf
+vv --dry-run document.pdf
 # Output: open -a Preview document.pdf
 ```
 
@@ -120,7 +120,7 @@ et --dry-run document.pdf
 Check if a file matches any rule without executing it:
 
 ```bash
-et :match document.pdf
+vv :match document.pdf
 # Output: Matched rule: PDF Reader
 ```
 
@@ -130,27 +130,27 @@ Generate shell completion scripts for bash, zsh, fish, or powershell:
 
 ```bash
 # For zsh
-et :completion zsh > _et
+vv :completion zsh > _vv
 ```
 
 ### Version (`:version`)
 
-Print the version number of entry:
+Print the version number of via:
 
 ```bash
-et :version
+vv :version
 ```
 
 ## Configuration
 
-The configuration file is located at `~/.config/entry/config.yml`.
+The configuration file is located at `~/.config/via/config.yml`.
 
 ### Quick Start
 
 Initialize a default configuration:
 
 ```bash
-et :config init
+vv :config init
 ```
 
 ### Managing Rules
@@ -159,43 +159,43 @@ You can manage rules entirely from the CLI:
 
 ```bash
 # Add a rule for PDF files
-et :config add --name "PDF Reader" --ext "pdf" --cmd "open {{.File}}" --background
+vv :config add --name "PDF Reader" --ext "pdf" --cmd "open {{.File}}" --background
 
 # Add a rule for log files using regex
-et :config add --name "Log Viewer" --regex ".*\.log$" --cmd "tail -f {{.File}}" --terminal
+vv :config add --name "Log Viewer" --regex ".*\.log$" --cmd "tail -f {{.File}}" --terminal
 
 # Add a rule with MIME type matching
-et :config add --name "Images" --mime "image/.*" --cmd "feh {{.File}}"
+vv :config add --name "Images" --mime "image/.*" --cmd "feh {{.File}}"
 
-# Remove a rule by index (see 'et :config list' for indices)
-et :config remove 1
+# Remove a rule by index (see 'vv :config list' for indices)
+vv :config remove 1
 
 # Set the default command (fallback)
-et :config set-default "vim {{.File}}"
+vv :config set-default "vim {{.File}}"
 
 # Edit rules interactively
-et :config edit
+vv :config edit
 
 # Reorder rules (move rule at index 3 to index 1)
-et :config move 3 1
+vv :config move 3 1
 
 # Manage Aliases
-et :config alias add ll "ls -la"
-et :config alias list
-et :config alias remove ll
+vv :config alias add ll "ls -la"
+vv :config alias list
+vv :config alias remove ll
 
 # Import/Export Configuration
-et :config export backup.yml
-et :config import backup.yml
+vv :config export backup.yml
+vv :config import backup.yml
 
 # Check Configuration
-et :config check
+vv :config check
 
 # List all rules
-et :config list
+vv :config list
 
 # Open config file in default editor
-et :config open
+vv :config open
 ```
 
 ### Remote Sync
@@ -204,13 +204,13 @@ Synchronize your configuration using GitHub Gists:
 
 ```bash
 # Initialize sync (creates a new Gist or links existing)
-et :config sync init
+vv :config sync init
 
 # Push local config to Gist
-et :config sync push
+vv :config sync push
 
 # Pull config from Gist
-et :config sync pull
+vv :config sync pull
 ```
 
 
@@ -254,7 +254,7 @@ A rule in `config.yml` can have the following fields:
 version: "1"
 default_command: "vim {{.File}}" # Fallback if no rules match
 aliases:
-  v: "vim" # 'et v file.txt' -> 'vim file.txt'
+  v: "vim" # 'vv v file.txt' -> 'vim file.txt'
 rules:
   - name: "Open PDFs"
     extensions: ["pdf"]
@@ -273,17 +273,17 @@ Profiles allow you to have different configurations for different environments.
 
 ```bash
 # Create a new profile named 'work' based on default
-et :config profile-copy default work
+vv :config profile-copy default work
 
 # List available profiles
-et :config profile-list
+vv :config profile-list
 
 # Use the 'work' profile for a single command
-et --profile work document.pdf
+vv --profile work document.pdf
 
 # Set 'work' as the default profile for this session
-export ENTRY_PROFILE=work
-et document.pdf
+export VIA_PROFILE=work
+vv document.pdf
 ```
 
 ## Troubleshooting
@@ -292,7 +292,7 @@ et document.pdf
 Ensure the command specified in your rule exists in your system `$PATH`.
 
 ### "No matching rule found"
-1.  Run with `--explain` to see what Entry checked.
+1.  Run with `--explain` to see what Via checked.
 2.  Check if your file has an extension.
 3.  Verify your regex patterns.
 
@@ -300,8 +300,8 @@ Ensure the command specified in your rule exists in your system `$PATH`.
 Enable verbose logging to see detailed execution steps:
 
 ```bash
-et -v document.pdf
-# Logs are written to ~/.config/entry/logs/entry.log
+vv -v document.pdf
+# Logs are written to ~/.config/via/logs/via.log
 ```
 
 ## Development
@@ -311,7 +311,7 @@ et -v document.pdf
 ```bash
 task build
 # or
-go build -o et ./cmd/et
+go build -o vv ./cmd/vv
 ```
 
 ### Test

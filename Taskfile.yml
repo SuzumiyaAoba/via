@@ -12,7 +12,7 @@ tasks:
   build:
     desc: Build the binary
     cmds:
-      - go build -ldflags "-X github.com/SuzumiyaAoba/entry/internal/cli.Version={{.VERSION}}" -o et ./cmd/et
+      - go build -ldflags "-X github.com/SuzumiyaAoba/via/internal/cli.Version={{.VERSION}}" -o vv ./cmd/vv
 
   test:
     desc: Run tests
@@ -35,7 +35,7 @@ tasks:
   clean:
     desc: Clean artifacts
     cmds:
-      - rm -f et
+      - rm -f vv
       - rm -rf dist
       - rm -f coverage.out coverage.html
 
