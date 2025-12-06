@@ -13,7 +13,7 @@ import (
 
 
 
-var _ = Describe("Entry CLI", func() {
+var _ = Describe("Via CLI", func() {
 	var (
 		tmpDir     string
 		configFile string
@@ -208,7 +208,7 @@ rules: []
 		It("should show version", func() {
 			err := rootCmd.RunE(rootCmd, []string{"--version"})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(outBuf.String()).To(ContainSubstring("et version"))
+			Expect(outBuf.String()).To(ContainSubstring("vv version"))
 		})
 
 		It("should return error if config load fails", func() {
@@ -238,8 +238,8 @@ rules: []
 			defer func() { config.UserHomeDir = origUserHomeDir }()
 			
 			// Set profile to trigger resolution
-			os.Setenv("ENTRY_PROFILE", "test")
-			defer os.Unsetenv("ENTRY_PROFILE")
+			os.Setenv("VIA_PROFILE", "test")
+			defer os.Unsetenv("VIA_PROFILE")
 			
 			err := rootCmd.RunE(rootCmd, []string{"file.txt"})
 			Expect(err).To(HaveOccurred())

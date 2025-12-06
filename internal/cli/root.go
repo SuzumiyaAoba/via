@@ -21,7 +21,7 @@ var (
 )
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/entry/config.yml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/via/config.yml)")
 	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "print command instead of executing")
 	rootCmd.Flags().BoolVarP(&interactive, "select", "s", false, "Interactive selection")
 	rootCmd.Flags().BoolVar(&explain, "explain", false, "Show detailed matching information")
@@ -37,7 +37,7 @@ func init() {
 		Use:   ":help [command]",
 		Short: "Help about any command",
 		Long: `Help provides help for any command in the application.
-Simply type et :help [path to command] for full details.`,
+Simply type vv :help [path to command] for full details.`,
 		Run: func(c *cobra.Command, args []string) {
 			cmd, _, e := c.Root().Find(args)
 			if cmd == nil || e != nil {
@@ -60,9 +60,9 @@ Simply type et :help [path to command] for full details.`,
 }
 
 var rootCmd = &cobra.Command{
-	Use:     "et <file>",
-	Short:   "Entry is a CLI file association tool",
-	Long:    `Entry allows you to execute specific commands based on file extensions or regex patterns matched against a provided file argument.`,
+	Use:     "vv <file>",
+	Short:   "Via is a CLI file association tool",
+	Long:    `Via allows you to execute specific commands based on file extensions or regex patterns matched against a provided file argument.`,
 	Version: Version,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
@@ -84,8 +84,8 @@ var rootCmd = &cobra.Command{
 // initialize handles common setup like logging and config loading
 func initialize(cmd *cobra.Command, args []string) error {
 	// Check for profile environment variable
-	if profile == "" && os.Getenv("ENTRY_PROFILE") != "" {
-		profile = os.Getenv("ENTRY_PROFILE")
+	if profile == "" && os.Getenv("VIA_PROFILE") != "" {
+		profile = os.Getenv("VIA_PROFILE")
 	}
 
 	// Resolve config file path with profile
@@ -124,7 +124,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 
 	// Handle version flag manually
 	if versionVal, _ := cmd.Flags().GetBool("version"); versionVal {
-		fmt.Fprintf(cmd.OutOrStdout(), "et version %s\n", Version)
+		fmt.Fprintf(cmd.OutOrStdout(), "vv version %s\n", Version)
 		return nil
 	}
 
@@ -164,8 +164,8 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check for system commands (prefixed with :)
-	// This ensures 'et :config' runs the config command
-	// 'et config' will fall through to file/alias execution
+	// This ensures 'vv :config' runs the config command
+	// 'vv config' will fall through to file/alias execution
 	if len(args) > 0 {
 		subCmd, subArgs, err := cmd.Find(args)
 		if err == nil && subCmd != cmd {
@@ -192,7 +192,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 	defer logger.GetGlobal().Close()
 
-	logger.Debug("Starting entry execution with args: %v", args)
+	logger.Debug("Starting via execution with args: %v", args)
 
 	cfg, err := config.LoadConfig(cfgFile)
 	if err != nil {

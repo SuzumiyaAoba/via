@@ -16,7 +16,7 @@ import (
 var configCmd = &cobra.Command{
 	Use:   ":config",
 	Short: "Manage configuration",
-	Long:  `Manage the entry configuration file.`,
+	Long:  `Manage the via configuration file.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},

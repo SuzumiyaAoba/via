@@ -16,13 +16,13 @@ var completionCmd = &cobra.Command{
 
 Bash:
 
-  $ source <(et :completion bash)
-
-  # To load completions for each session, execute once:
-  # Linux:
-  $ et :completion bash > /etc/bash_completion.d/et
-  # macOS:
-  $ et :completion bash > /usr/local/etc/bash_completion.d/et
+  $ source <(vv :completion bash)
+ 
+   # To load completions for each session, execute once:
+   # Linux:
+   $ vv :completion bash > /etc/bash_completion.d/vv
+   # macOS:
+   $ vv :completion bash > /usr/local/etc/bash_completion.d/vv
 
 Zsh:
 
@@ -32,23 +32,23 @@ Zsh:
   $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
   # To load completions for each session, execute once:
-  $ et :completion zsh > "${fpath[1]}/_et"
+   $ vv :completion zsh > "${fpath[1]}/_vv"
 
   # You will need to start a new shell for this setup to take effect.
 
 Fish:
 
-  $ et :completion fish | source
-
-  # To load completions for each session, execute once:
-  $ et :completion fish > ~/.config/fish/completions/et.fish
+  $ vv :completion fish | source
+ 
+   # To load completions for each session, execute once:
+   $ vv :completion fish > ~/.config/fish/completions/vv.fish
 
 PowerShell:
 
-  PS> et :completion powershell | Out-String | Invoke-Expression
-
-  # To load completions for each session, execute once:
-  PS> et :completion powershell > et.ps1
+  PS> vv :completion powershell | Out-String | Invoke-Expression
+ 
+   # To load completions for each session, execute once:
+   PS> vv :completion powershell > vv.ps1
   # and source this file from your PowerShell profile.
 `,
 	DisableFlagsInUseLine: true,
@@ -75,7 +75,7 @@ func CompletionProfiles(cmd *cobra.Command, args []string, toComplete string) ([
 		return nil, cobra.ShellCompDirectiveError
 	}
 
-	profilesDir := filepath.Join(home, ".config", "entry", "profiles")
+	profilesDir := filepath.Join(home, ".config", "via", "profiles")
 	entries, err := os.ReadDir(profilesDir)
 	if err != nil {
 		if os.IsNotExist(err) {

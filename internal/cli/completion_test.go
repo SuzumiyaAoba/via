@@ -40,7 +40,7 @@ var _ = Describe("Completion", func() {
 		})
 
 		It("should return empty list when profiles directory is empty", func() {
-			err := os.MkdirAll(filepath.Join(tmpHome, ".config", "entry", "profiles"), 0755)
+			err := os.MkdirAll(filepath.Join(tmpHome, ".config", "via", "profiles"), 0755)
 			Expect(err).NotTo(HaveOccurred())
 
 			profiles, directive := CompletionProfiles(nil, nil, "")
@@ -49,7 +49,7 @@ var _ = Describe("Completion", func() {
 		})
 
 		It("should list available profiles", func() {
-			profilesDir := filepath.Join(tmpHome, ".config", "entry", "profiles")
+			profilesDir := filepath.Join(tmpHome, ".config", "via", "profiles")
 			err := os.MkdirAll(profilesDir, 0755)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -67,7 +67,7 @@ var _ = Describe("Completion", func() {
 		})
 
 		It("should filter profiles by prefix", func() {
-			profilesDir := filepath.Join(tmpHome, ".config", "entry", "profiles")
+			profilesDir := filepath.Join(tmpHome, ".config", "via", "profiles")
 			err := os.MkdirAll(profilesDir, 0755)
 			Expect(err).NotTo(HaveOccurred())
 
